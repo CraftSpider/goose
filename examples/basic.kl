@@ -24,10 +24,10 @@ $ An array literal
 [1, 2, 3];
 
 $ A function literal
-fn: null () -> || [];
+fn: null () -> |1b| [];
 
 $ A function definition
-def foo: null (arg: int) -> |true| []
+def foo: null (arg: int) -> |1b| []
 
 $ A function call
 foo(1);

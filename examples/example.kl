@@ -29,11 +29,11 @@ print(foo(2));
 print(0b);
 print(1b);
 
-write(console, 0b); $ write_console(0b);
-write(error, 0b); $ write_error(0b);
-write(raw_file, 0b); $ write_file(0b);
-filename = "foo";
-write(filename, 0b); $ write_io(filename, 0b);
+$ write(console, 0b); $ write_console(0b);
+$ write(error, 0b); $ write_error(0b);
+$ write(raw_file, 0b); $ write_file(0b);
+unique filename = "foo";
+$ write(filename, 0b); $ write_io(filename, 0b);
 
 $ console = stdout
 $ error = stderr

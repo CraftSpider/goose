@@ -158,6 +158,16 @@ impl FnDef {
 
         env.set_first_iter(true);
         loop {
+            if self.stmts.is_empty() {
+                if let Ok(Value::Bit(true)) = self.limit.interpret(env) {
+                    return if self.ret == Type::Null {
+                        Ok(Value::Null)
+                    } else {
+                        Err(Exception::InvalidType(self.ret.clone(), Type::Null))
+                    }
+                }
+            }
+
             for stmt in &self.stmts {
                 let val = stmt.interpret(env)?;
 
@@ -176,14 +186,30 @@ impl FnDef {
 }
 
 impl Literal {
-    pub fn interpret<'ip>(&'ip self, _env: &mut Env<'ip>) -> Result<Value<'ip>> {
+    pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         match self {
             Literal::Int(i) => Ok(Value::Int(*i)),
             Literal::Float(f) => Ok(Value::Float(*f)),
-            Literal::Char(_) => todo!(),
-            Literal::CharArray(_) => todo!(),
+            Literal::Char(c) => Ok(Value::Char(*c)),
+            Literal::CharArray(s) => Ok(Value::String(s.clone())),
             Literal::Bit(b) => Ok(Value::Bit(*b)),
-            Literal::Array(_) => todo!(),
+            Literal::Fn(f) => Ok(Value::Fn(f)),
+            Literal::Array(a) => {
+                let vals = a.iter()
+                    .map(|expr| expr.interpret(env))
+                    .collect::<Result<Vec<_>>>()?;
+
+                if let Some(val) = vals.first() {
+                    let first_ty = val.ty();
+                    for i in vals.iter().skip(1) {
+                        if i.ty() != first_ty {
+                            return Err(Exception::InvalidType(first_ty, i.ty()))
+                        }
+                    }
+                }
+
+                Ok(Value::Array(vals))
+            },
         }
     }
 }
@@ -215,6 +241,10 @@ impl Stmt {
             Stmt::Expr(expr) => {
                 Ok(expr.interpret(env)?)
             },
+            Stmt::TypeDef(name, ty) => {
+                env.insert_ty(name, ty.clone());
+                Ok(Value::Null)
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ use crate::ast::File;
 pub fn parse<'a>(tokens: &[(Token<'a>, Range<usize>)]) -> Result<File, Vec<Simple<Token<'a>>>> {
 
     let stream = Stream::from_iter(
-        tokens.last().unwrap().1.clone(),
+        tokens.last().map(|(_, range)| range.clone()).unwrap_or(0..0),
         tokens.iter().cloned(),
     );
 

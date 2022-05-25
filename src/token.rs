@@ -19,6 +19,8 @@ pub enum Token<'a> {
     Once,
     #[token("carryover")]
     CarryOver,
+    #[token("type")]
+    Type,
 
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
     Ident(&'a str),
@@ -92,6 +94,7 @@ impl fmt::Display for Token<'_> {
             Token::Fn => "fn",
             Token::Once => "once",
             Token::CarryOver => "carryover",
+            Token::Type => "type",
 
             Token::Ident("...") => "<ident>",
             Token::Ident(i) => *i,

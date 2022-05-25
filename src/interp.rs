@@ -72,7 +72,8 @@ impl BuiltinFn {
 pub struct Env<'ip> {
     sync: bool,
     first_iter: bool,
-    scope_stack: Vec<HashMap<String, Value<'ip>>>,
+    value_stack: Vec<HashMap<String, Value<'ip>>>,
+    ty_stack: Vec<HashMap<String, Type>>,
 }
 
 impl<'ip> Env<'ip> {
@@ -89,11 +90,12 @@ impl<'ip> Env<'ip> {
     }
 
     pub fn push_scope(&mut self) {
-        self.scope_stack.push(HashMap::new())
+        self.value_stack.push(HashMap::new());
+        self.ty_stack.push(HashMap::new());
     }
 
     pub fn lookup_var(&mut self, var: &str) -> Option<&Value<'ip>> {
-        let scope = self.scope_stack
+        let scope = self.value_stack
             .iter()
             .rev()
             .find(|scope| scope.contains_key(var));
@@ -102,13 +104,20 @@ impl<'ip> Env<'ip> {
     }
 
     pub fn insert_var(&mut self, name: &str, value: Value<'ip>) -> &Value<'ip> {
-        let scope = self.scope_stack.last_mut().unwrap();
+        let scope = self.value_stack.last_mut().unwrap();
         scope.insert(name.to_string(), value);
         scope.get(name).unwrap()
     }
 
     pub fn pop_scope(&mut self) {
-        self.scope_stack.pop();
+        self.value_stack.pop();
+        self.ty_stack.pop();
+    }
+
+    pub fn insert_ty(&mut self, name: &str, ty: Type) -> &Type {
+        let scope = self.ty_stack.last_mut().unwrap();
+        scope.insert(name.to_string(), ty);
+        scope.get(name).unwrap()
     }
 }
 
@@ -118,6 +127,9 @@ pub enum Value<'ip> {
     Int(i128),
     Float(f64),
     Bit(bool),
+    Char(char),
+    String(String),
+    Array(Vec<Value<'ip>>),
     Fn(&'ip FnDef),
     Builtin(BuiltinFn),
 }
@@ -129,6 +141,16 @@ impl<'ip> Value<'ip> {
             Value::Int(_) => Type::Int,
             Value::Float(_) => Type::Float,
             Value::Bit(_) => Type::Bit,
+            Value::Char(_) => Type::Char,
+            Value::String(_) => Type::CharArray,
+            Value::Array(arr) => {
+                let inner = if let Some(val) = arr.first() {
+                    val.ty()
+                } else {
+                    Type::Null
+                };
+                Type::Array(Box::new(inner))
+            },
             Value::Fn(def) => Type::Fn(Box::new(def.ret_ty().clone()), def.arg_tys()),
             Value::Builtin(def) => Type::Fn(Box::new(def.ret.clone()), def.args.clone())
         }

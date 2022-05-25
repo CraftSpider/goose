@@ -107,7 +107,8 @@ pub enum Literal {
     Char(char),
     CharArray(String),
     Bit(bool),
-    Array(Box<Expr>),
+    Fn(FnDef),
+    Array(Vec<Expr>),
 }
 
 #[derive(Clone, Debug)]
@@ -117,6 +118,7 @@ pub enum Stmt {
     Once(Vec<Stmt>),
     Sync(Vec<Stmt>),
     Expr(Expr),
+    TypeDef(Ident, Type),
 }
 
 #[derive(Clone, Debug, PartialEq)]

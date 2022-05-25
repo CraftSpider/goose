@@ -130,7 +130,7 @@ impl Ident {
 }
 
 impl Literal {
-    pub fn parser<'a>(_expr: Parser!['a, Expr]) -> Parser!['a, Self] {
+    pub fn parser<'a>(expr: Parser!['a, Expr]) -> Parser!['a, Self] {
         filter_map(|span, tok| {
             match tok {
                 Token::Int(i) => Ok(Literal::Int(i128::from_str(i).unwrap())),
@@ -151,6 +151,26 @@ impl Literal {
                 ),
             }
         })
+            .or(
+                expr.clone().separated_by(just(Token::Comma)).delimited_by(just(Token::OpenBracket), just(Token::CloseBracket))
+                    .map(|expr| Literal::Array(expr))
+            )
+            .or(
+                just(Token::Fn)
+                    .ignore_then(just(Token::Colon))
+                    .ignore_then(Type::parser())
+                    .then(FnArg::parser().separated_by(just(Token::Comma)).delimited_by(just(Token::OpenParen), just(Token::CloseParen)))
+                    .then_ignore(just(Token::Arrow))
+                    .then(expr.clone().delimited_by(just(Token::Pipe), just(Token::Pipe)))
+                    .then(Stmt::parser(expr).repeated().delimited_by(just(Token::OpenBracket), just(Token::CloseBracket)))
+                    .map(|(((ret, args), limit), stmts)| Literal::Fn(FnDef {
+                        name: Ident(String::from("<closure>")),
+                        ret,
+                        args,
+                        limit: Box::new(limit),
+                        stmts,
+                    }))
+            )
     }
 }
 
@@ -166,6 +186,13 @@ impl Stmt {
                 .or(just(Token::Once)
                     .ignore_then(stmt.repeated().delimited_by(just(Token::OpenCurly), just(Token::CloseCurly)))
                     .map(Stmt::Once)
+                )
+                .or(just(Token::Type)
+                    .ignore_then(Ident::parser())
+                    .then_ignore(just(Token::Eq))
+                    .then(Type::parser())
+                    .then_ignore(just(Token::SemiColon))
+                    .map(|(name, ty)| Stmt::TypeDef(name, ty))
                 )
                 .or(expr.map(Stmt::Expr).then_ignore(just(Token::SemiColon)))
         })
