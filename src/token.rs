@@ -33,30 +33,65 @@ pub enum Token<'a> {
     #[regex(r#""([^"]|\\")*""#)]
     Str(&'a str),
 
-    #[token("[")]
-    OpenBracket,
-    #[token("]")]
-    CloseBracket,
+    #[token("`")]
+    Tick,
+    #[token("~")]
+    Tilde,
+    #[token("!")]
+    Bang,
+    #[token("@")]
+    At,
+    #[token("#")]
+    Hash,
+    #[token("%")]
+    Percent,
+    #[token("^")]
+    Caret,
+    #[token("&")]
+    And,
+    #[token("*")]
+    Star,
     #[token("(")]
     OpenParen,
     #[token(")")]
     CloseParen,
+    #[token("-")]
+    Dash,
+    #[token("=")]
+    Eq,
+    #[token("+")]
+    Plus,
+    #[token("[")]
+    OpenBracket,
+    #[token("]")]
+    CloseBracket,
     #[token("{")]
     OpenCurly,
     #[token("}")]
     CloseCurly,
-    #[token(",")]
-    Comma,
+    #[token("\\")]
+    Backslash,
     #[token("|")]
     Pipe,
-    #[token(":")]
-    Colon,
     #[token(";")]
     SemiColon,
+    #[token(":")]
+    Colon,
+    #[token(",")]
+    Comma,
+    #[token("<")]
+    Lt,
+    #[token(".")]
+    Dot,
+    #[token(">")]
+    Gt,
+    #[token("/")]
+    Slash,
+    #[token("?")]
+    Question,
+
     #[token("->")]
     Arrow,
-    #[token("=")]
-    Eq,
     #[token("==")]
     EqEq,
     #[token("!=")]
@@ -76,8 +111,10 @@ pub enum Token<'a> {
     #[token("String")]
     String,
 
-    #[regex(r"\$.*", logos::skip)]
-    #[regex(r"\$\$\$(?:[^$]|\$[^$]|\$\$[^$])*\$\$\$", priority = 3, callback = logos::skip)]
+    #[regex(r"\$.*")]
+    #[regex(r"\$\$\$(?:[^$]|\$[^$]|\$\$[^$])*\$\$\$", priority = 3)]
+    Comment(&'a str),
+
     #[regex(r"[ \t\r\n]+", logos::skip)]
     #[error]
     Error,
@@ -107,18 +144,36 @@ impl fmt::Display for Token<'_> {
             Token::Str("...") => "<chararray>",
             Token::Str(s) => *s,
 
-            Token::OpenBracket => "[",
-            Token::CloseBracket => "]",
+            Token::Tick => "`",
+            Token::Tilde => "~",
+            Token::Bang => "!",
+            Token::At => "@",
+            Token::Hash => "#",
+            Token::Percent => "%",
+            Token::Caret => "^",
+            Token::And => "&",
+            Token::Star => "*",
             Token::OpenParen => "(",
             Token::CloseParen => ")",
+            Token::Dash => "-",
+            Token::Eq => "=",
+            Token::Plus => "+",
+            Token::OpenBracket => "[",
+            Token::CloseBracket => "]",
             Token::OpenCurly => "{",
             Token::CloseCurly => "}",
-            Token::Comma => ",",
+            Token::Backslash => "\\",
             Token::Pipe => "|",
-            Token::Colon => ":",
             Token::SemiColon => ";",
+            Token::Colon => ":",
+            Token::Comma => ",",
+            Token::Lt => "<",
+            Token::Dot => ".",
+            Token::Gt => ">",
+            Token::Slash => "/",
+            Token::Question => "?",
+
             Token::Arrow => "->",
-            Token::Eq => "=",
             Token::EqEq => "==",
             Token::BangEq => "!=",
             Token::PlusEq => "+=",
@@ -127,6 +182,7 @@ impl fmt::Display for Token<'_> {
             Token::SlashEq => "/=",
 
             Token::String => "string",
+            Token::Comment(c) => *c,
             Token::Error => "<error>",
         };
         write!(f, "{}", to_write)
@@ -134,5 +190,9 @@ impl fmt::Display for Token<'_> {
 }
 
 pub fn tokenize(file: &str) -> Vec<(Token<'_>, Range<usize>)> {
-    Token::lexer(file).spanned().collect()
+    Token::lexer(file).spanned().filter(|(t, _)| !matches!(t, Token::Comment(_))).collect()
 }
+
+/*pub fn tokenize_with_comments(file: &str) -> Vec<(Token<'_>, Range<usize>)> {
+    Token::lexer(file).spanned().collect()
+}*/
