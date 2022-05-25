@@ -16,7 +16,10 @@ impl Assign {
                     }
                 }
                 AssignTy::Default => {
-                    if env.lookup_var(&self.ident).is_some() {
+                    if let Some(old_val) = env.lookup_var(&self.ident) {
+                        if old_val.ty() != val.ty() {
+                            return Err(Exception::InvalidType(old_val.ty(), val.ty()));
+                        }
                         env.insert_var(&self.ident, val)
                     } else {
                         return Err(Exception::NameNotFound(self.ident.clone()));
