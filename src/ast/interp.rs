@@ -132,6 +132,9 @@ impl Expr {
                     BinOp::Eq => Ok(Value::Bit(lval == rval)),
                     BinOp::Neq => Ok(Value::Bit(lval != rval)),
                     BinOp::Add => lval.op_add(env, rval),
+                    BinOp::Sub => lval.op_sub(env, rval),
+                    BinOp::Mul => lval.op_mul(env, rval),
+                    BinOp::Div => lval.op_div(env, rval),
                 }
             }
         }

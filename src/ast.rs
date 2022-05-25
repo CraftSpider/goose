@@ -32,6 +32,9 @@ pub enum BinOp {
     Eq,
     Neq,
     Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 impl BinOp {
@@ -40,6 +43,9 @@ impl BinOp {
             BinOp::Eq => String::from("=="),
             BinOp::Neq => String::from("!="),
             BinOp::Add => String::from("+"),
+            BinOp::Sub => String::from("-"),
+            BinOp::Mul => String::from("*"),
+            BinOp::Div => String::from("/"),
         }
     }
 }

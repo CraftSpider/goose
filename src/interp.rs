@@ -205,16 +205,28 @@ impl<'ip> Value<'ip> {
         }
     }
 
-    pub fn op_sub(&self, _env: &mut Env<'ip>, _val: Value<'ip>) -> Result<Value<'ip>> {
-        todo!()
+    pub fn op_sub(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
+        match (self, val) {
+            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
+            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a - b)),
+            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
+        }
     }
 
-    pub fn op_mul(&self, _env: &mut Env<'ip>, _val: Value<'ip>) -> Result<Value<'ip>> {
-        todo!()
+    pub fn op_mul(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
+        match (self, val) {
+            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
+            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a * b)),
+            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
+        }
     }
 
-    pub fn op_div(&self, _env: &mut Env<'ip>, _val: Value<'ip>) -> Result<Value<'ip>> {
-        todo!()
+    pub fn op_div(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
+        match (self, val) {
+            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a / b)),
+            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a / b)),
+            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
+        }
     }
 }
 

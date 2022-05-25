@@ -47,6 +47,16 @@ impl BinOp {
             .to(BinOp::Eq)
             .or(just(Token::BangEq).to(BinOp::Neq))
     }
+
+    pub fn add_parser<'a>() -> Parser!['a, Self] {
+        just(Token::Plus).to(BinOp::Add)
+            .or(just(Token::Dash).to(BinOp::Sub))
+    }
+
+    pub fn mul_parser<'a>() -> Parser!['a, Self] {
+        just(Token::Star).to(BinOp::Mul)
+            .or(just(Token::Slash).to(BinOp::Div))
+    }
 }
 
 impl Expr {
@@ -66,12 +76,22 @@ impl Expr {
                 .or(FnCall::parser(expr).map(Expr::FnCall))
                 .or(Ident::parser().map(Expr::Ident));
 
-            let bin = atom
-                .clone()
-                .then(BinOp::cmp_parser().then(atom).repeated())
-                .foldl(|left, (op, right)| Expr::BinOp(Box::new(left), op, Box::new(right)));
+            let bin_parsers = [
+                BinOp::mul_parser().boxed(),
+                BinOp::add_parser().boxed(),
+                BinOp::cmp_parser().boxed(),
+            ];
 
-            bin
+            let mut binary = atom.boxed();
+
+            for op_parser in bin_parsers {
+                binary = binary.clone()
+                    .then(op_parser.then(binary).repeated())
+                    .foldl(|left, (op, right)| Expr::BinOp(Box::new(left), op, Box::new(right)))
+                    .boxed();
+            }
+
+            binary
         })
     }
 }
