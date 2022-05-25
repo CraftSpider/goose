@@ -54,6 +54,15 @@ impl Expr {
         recursive(|expr| {
             let atom = Literal::parser(expr.clone())
                 .map(Expr::Literal)
+                .or(
+                    just(Token::Ident("write"))
+                        .ignore_then(just(Token::OpenParen))
+                        .ignore_then(WriteTy::parser(expr.clone()))
+                        .then_ignore(just(Token::Comma))
+                        .then(expr.clone().separated_by(just(Token::Comma)))
+                        .then_ignore(just(Token::CloseParen))
+                        .map(|(ty, exprs)| Expr::Write(ty, exprs))
+                )
                 .or(FnCall::parser(expr).map(Expr::FnCall))
                 .or(Ident::parser().map(Expr::Ident));
 
@@ -254,5 +263,14 @@ impl Type {
                 )
                 .map(|(ret, args)| Type::Fn(Box::new(ret), args)))
         })
+    }
+}
+
+impl WriteTy {
+    pub fn parser<'a>(expr: Parser!['a, Expr]) -> Parser!['a, Self] {
+        just(Token::Ident("console")).to(WriteTy::Console)
+            .or(just(Token::Ident("error")).to(WriteTy::Error))
+            .or(just(Token::Ident("raw_file")).to(WriteTy::RawFile))
+            .or(expr.map(|expr| WriteTy::Other(Box::new(expr))))
     }
 }

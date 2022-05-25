@@ -47,6 +47,7 @@ impl BinOp {
 #[derive(Clone, Debug)]
 pub enum Expr {
     FnCall(FnCall),
+    Write(WriteTy, Vec<Expr>),
     Literal(Literal),
     Ident(Ident),
     BinOp(Box<Expr>, BinOp, Box<Expr>),
@@ -79,6 +80,10 @@ pub struct FnDef {
 }
 
 impl FnDef {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn ret_ty(&self) -> &Type {
         &self.ret
     }
@@ -89,7 +94,7 @@ impl FnDef {
 }
 
 #[derive(Clone, Debug)]
-pub struct Ident(String);
+pub struct Ident(pub(crate) String);
 
 impl Deref for Ident {
     type Target = str;
@@ -152,4 +157,12 @@ impl Type {
             ),
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum WriteTy {
+    Console,
+    Error,
+    RawFile,
+    Other(Box<Expr>),
 }

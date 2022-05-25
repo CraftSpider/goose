@@ -1,4 +1,5 @@
 #![feature(iter_intersperse)]
+#![feature(io_safety)]
 
 #![warn(
     elided_lifetimes_in_paths,

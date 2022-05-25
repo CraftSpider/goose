@@ -11,7 +11,7 @@ def foo: int (i: int) -> |baz != bar| [
 
     unique bar = i;
 
-    print(i);
+    write(console, i);
     $ statement isn't checked in sync block
     sync {
         bar += 1;
@@ -24,16 +24,16 @@ def foo: int (i: int) -> |baz != bar| [
 
 def takes_fn: null (f: fn: null (int), a: int) -> |false| []
 
-print(foo(2));
+write(console, foo(2));
 
-print(0b);
-print(1b);
+write(console, 0b);
+write(console, 1b);
 
-$ write(console, 0b); $ write_console(0b);
-$ write(error, 0b); $ write_error(0b);
-$ write(raw_file, 0b); $ write_file(0b);
+write(console, 0b); $ write_console(0b);
+write(error, 0b); $ write_error(0b);
+write(raw_file, 0b); $ write_file(0b);
 unique filename = "foo";
-$ write(filename, 0b); $ write_io(filename, 0b);
+write(filename, 0b); $ write_io(filename, 0b);
 
 $ console = stdout
 $ error = stderr

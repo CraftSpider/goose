@@ -1,5 +1,7 @@
 use core::fmt;
 use std::collections::HashMap;
+use std::io;
+use std::io::Error;
 
 use crate::ast::{BinOp, FnDef, Ident, Type};
 
@@ -10,6 +12,7 @@ pub enum Exception {
     InvalidType(Type, Type),
     InvalidOp(Type, BinOp, Type),
     NameNotFound(Ident),
+    Io,
 }
 
 impl fmt::Display for Exception {
@@ -35,12 +38,22 @@ impl fmt::Display for Exception {
             Exception::NameNotFound(name) => {
                 write!(f, "Attempted to access invalid identifier {}", &**name)
             }
+            Exception::Io => {
+                write!(f, "IO operation failed")
+            }
         }
+    }
+}
+
+impl From<io::Error> for Exception {
+    fn from(_: Error) -> Self {
+        Exception::Io
     }
 }
 
 #[derive(Clone)]
 pub struct BuiltinFn {
+    name: Ident,
     ret: Type,
     args: Vec<Type>,
     handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>,
@@ -58,11 +71,12 @@ impl fmt::Debug for BuiltinFn {
 
 impl BuiltinFn {
     pub fn new(
+        name: &str,
         ret: Type,
         args: Vec<Type>,
         handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>,
     ) -> BuiltinFn {
-        BuiltinFn { ret, args, handler }
+        BuiltinFn { name: Ident(String::from(name)), ret, args, handler }
     }
 
     pub fn invoke<'ip>(&self, env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>> {
@@ -157,6 +171,30 @@ impl<'ip> Value<'ip> {
             Value::Fn(def) => Type::Fn(Box::new(def.ret_ty().clone()), def.arg_tys()),
             Value::Builtin(def) => Type::Fn(Box::new(def.ret.clone()), def.args.clone()),
         }
+    }
+
+    pub fn write<W: io::Write>(&self, w: &mut W) -> Result<()> {
+        match self {
+            Value::Null => write!(w, "null")?,
+            Value::Int(i) => write!(w, "{}", i)?,
+            Value::Float(f) => write!(w, "{}", f)?,
+            Value::Bit(b) => if *b { write!(w, "1b")? } else { write!(w, "0b")? },
+            Value::Char(c) => write!(w, "{}", c)?,
+            Value::String(s) => write!(w, "{}", s)?,
+            Value::Array(a) => {
+                write!(w, "[")?;
+                for (idx, item) in a.iter().enumerate() {
+                    if idx != 0 {
+                        write!(w,  ", ")?;
+                    }
+                    item.write(w)?;
+                }
+                write!(w, "]")?;
+            },
+            Value::Fn(f) => write!(w, "<fn {}>", f.name())?,
+            Value::Builtin(b) => write!(w, "<builtin {}>", &*b.name)?,
+        };
+        Ok(())
     }
 
     pub fn op_add(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
