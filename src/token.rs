@@ -190,7 +190,10 @@ impl fmt::Display for Token<'_> {
 }
 
 pub fn tokenize(file: &str) -> Vec<(Token<'_>, Range<usize>)> {
-    Token::lexer(file).spanned().filter(|(t, _)| !matches!(t, Token::Comment(_))).collect()
+    Token::lexer(file)
+        .spanned()
+        .filter(|(t, _)| !matches!(t, Token::Comment(_)))
+        .collect()
 }
 
 /*pub fn tokenize_with_comments(file: &str) -> Vec<(Token<'_>, Range<usize>)> {

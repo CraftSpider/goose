@@ -76,7 +76,12 @@ impl BuiltinFn {
         args: Vec<Type>,
         handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>,
     ) -> BuiltinFn {
-        BuiltinFn { name: Ident(String::from(name)), ret, args, handler }
+        BuiltinFn {
+            name: Ident(String::from(name)),
+            ret,
+            args,
+            handler,
+        }
     }
 
     pub fn invoke<'ip>(&self, env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>> {
@@ -138,6 +143,8 @@ impl<'ip> Env<'ip> {
     }
 }
 
+// TODO: This should instead probably be a type + some data. This will make it more complicated,
+//       but allows types to be defined in terms of goose code in the future
 #[derive(Clone, Debug)]
 pub enum Value<'ip> {
     Null,
@@ -178,19 +185,25 @@ impl<'ip> Value<'ip> {
             Value::Null => write!(w, "null")?,
             Value::Int(i) => write!(w, "{}", i)?,
             Value::Float(f) => write!(w, "{}", f)?,
-            Value::Bit(b) => if *b { write!(w, "1b")? } else { write!(w, "0b")? },
+            Value::Bit(b) => {
+                if *b {
+                    write!(w, "1b")?
+                } else {
+                    write!(w, "0b")?
+                }
+            }
             Value::Char(c) => write!(w, "{}", c)?,
             Value::String(s) => write!(w, "{}", s)?,
             Value::Array(a) => {
                 write!(w, "[")?;
                 for (idx, item) in a.iter().enumerate() {
                     if idx != 0 {
-                        write!(w,  ", ")?;
+                        write!(w, ", ")?;
                     }
                     item.write(w)?;
                 }
                 write!(w, "]")?;
-            },
+            }
             Value::Fn(f) => write!(w, "<fn {}>", f.name())?,
             Value::Builtin(b) => write!(w, "<builtin {}>", &*b.name)?,
         };

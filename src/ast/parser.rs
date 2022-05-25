@@ -49,12 +49,14 @@ impl BinOp {
     }
 
     pub fn add_parser<'a>() -> Parser!['a, Self] {
-        just(Token::Plus).to(BinOp::Add)
+        just(Token::Plus)
+            .to(BinOp::Add)
             .or(just(Token::Dash).to(BinOp::Sub))
     }
 
     pub fn mul_parser<'a>() -> Parser!['a, Self] {
-        just(Token::Star).to(BinOp::Mul)
+        just(Token::Star)
+            .to(BinOp::Mul)
             .or(just(Token::Slash).to(BinOp::Div))
     }
 }
@@ -64,15 +66,13 @@ impl Expr {
         recursive(|expr| {
             let atom = Literal::parser(expr.clone())
                 .map(Expr::Literal)
-                .or(
-                    just(Token::Ident("write"))
-                        .ignore_then(just(Token::OpenParen))
-                        .ignore_then(WriteTy::parser(expr.clone()))
-                        .then_ignore(just(Token::Comma))
-                        .then(expr.clone().separated_by(just(Token::Comma)))
-                        .then_ignore(just(Token::CloseParen))
-                        .map(|(ty, exprs)| Expr::Write(ty, exprs))
-                )
+                .or(just(Token::Ident("write"))
+                    .ignore_then(just(Token::OpenParen))
+                    .ignore_then(WriteTy::parser(expr.clone()))
+                    .then_ignore(just(Token::Comma))
+                    .then(expr.clone().separated_by(just(Token::Comma)))
+                    .then_ignore(just(Token::CloseParen))
+                    .map(|(ty, exprs)| Expr::Write(ty, exprs)))
                 .or(FnCall::parser(expr).map(Expr::FnCall))
                 .or(Ident::parser().map(Expr::Ident));
 
@@ -85,7 +85,8 @@ impl Expr {
             let mut binary = atom.boxed();
 
             for op_parser in bin_parsers {
-                binary = binary.clone()
+                binary = binary
+                    .clone()
                     .then(op_parser.then(binary).repeated())
                     .foldl(|left, (op, right)| Expr::BinOp(Box::new(left), op, Box::new(right)))
                     .boxed();
@@ -137,10 +138,7 @@ impl FnDef {
                     .delimited_by(just(Token::OpenParen), just(Token::CloseParen)),
             )
             .then_ignore(just(Token::Arrow))
-            .then(
-                expr
-                    .delimited_by(just(Token::Pipe), just(Token::Pipe)),
-            )
+            .then(expr.delimited_by(just(Token::Pipe), just(Token::Pipe)))
             .then(
                 stmt.repeated()
                     .delimited_by(just(Token::OpenBracket), just(Token::CloseBracket)),
@@ -288,7 +286,8 @@ impl Type {
 
 impl WriteTy {
     pub fn parser<'a>(expr: Parser!['a, Expr]) -> Parser!['a, Self] {
-        just(Token::Ident("console")).to(WriteTy::Console)
+        just(Token::Ident("console"))
+            .to(WriteTy::Console)
             .or(just(Token::Ident("error")).to(WriteTy::Error))
             .or(just(Token::Ident("raw_file")).to(WriteTy::RawFile))
             .or(expr.map(|expr| WriteTy::Other(Box::new(expr))))

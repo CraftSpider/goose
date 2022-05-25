@@ -1,7 +1,7 @@
-use std::{fs, io, mem};
-use std::os::unix::io::{FromRawFd, RawFd};
 use super::*;
 use crate::interp::{BuiltinFn, Env, Exception, Result, Value};
+use std::os::unix::io::{FromRawFd, RawFd};
+use std::{fs, io, mem};
 
 impl Assign {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
@@ -86,12 +86,14 @@ impl Expr {
                     WriteTy::Other(expr) => ("write_io", Some(expr)),
                 };
 
-                let f = env.lookup_var(w)
+                let f = env
+                    .lookup_var(w)
                     .ok_or_else(|| Exception::NameNotFound(Ident(w.to_string())))?
                     .clone();
 
                 if let Value::Fn(f) = f {
-                    let mut args = args.iter()
+                    let mut args = args
+                        .iter()
                         .map(|val| val.interpret(env))
                         .collect::<Result<Vec<_>>>()?;
 
@@ -101,7 +103,8 @@ impl Expr {
 
                     f.call(env, args)?;
                 } else if let Value::Builtin(b) = f {
-                    let mut args = args.iter()
+                    let mut args = args
+                        .iter()
                         .map(|val| val.interpret(env))
                         .collect::<Result<Vec<_>>>()?;
 
@@ -118,7 +121,7 @@ impl Expr {
                 };
 
                 Ok(Value::Null)
-            },
+            }
             Expr::Literal(lit) => lit.interpret(env),
             Expr::Ident(i) => env
                 .lookup_var(i)
@@ -148,56 +151,84 @@ impl File {
         // Push global functions
         env.insert_var(
             "write_console",
-            Value::Builtin(BuiltinFn::new("write_console", Type::Null, vec![], |_env, args| {
-                let mut w = io::stdout();
-                for arg in args {
-                    arg.write(&mut w)?;
-                }
-                Ok(Value::Null)
-            })),
+            Value::Builtin(BuiltinFn::new(
+                "write_console",
+                Type::Null,
+                vec![],
+                |_env, args| {
+                    let mut w = io::stdout();
+                    for arg in args {
+                        arg.write(&mut w)?;
+                    }
+                    Ok(Value::Null)
+                },
+            )),
         );
         env.insert_var(
             "write_error",
-            Value::Builtin(BuiltinFn::new("write_error", Type::Null, vec![], |_env, args| {
-                let mut w = io::stderr();
-                for arg in args {
-                    arg.write(&mut w)?;
-                }
-                Ok(Value::Null)
-            })),
+            Value::Builtin(BuiltinFn::new(
+                "write_error",
+                Type::Null,
+                vec![],
+                |_env, args| {
+                    let mut w = io::stderr();
+                    for arg in args {
+                        arg.write(&mut w)?;
+                    }
+                    Ok(Value::Null)
+                },
+            )),
         );
         env.insert_var(
             "write_raw_file",
-            Value::Builtin(BuiltinFn::new("write_raw_file", Type::Null, vec![], |_env, args| {
-                let mut w = fs::File::options().write(true).create(true).open("honk")?;
-                for arg in args {
-                    arg.write(&mut w)?;
-                }
-                Ok(Value::Null)
-            })),
+            Value::Builtin(BuiltinFn::new(
+                "write_raw_file",
+                Type::Null,
+                vec![],
+                |_env, args| {
+                    let mut w = fs::File::options()
+                        .write(true)
+                        .create(true)
+                        .append(true)
+                        .open("honk")?;
+                    for arg in args {
+                        arg.write(&mut w)?;
+                    }
+                    Ok(Value::Null)
+                },
+            )),
         );
         env.insert_var(
             "write_io",
-            Value::Builtin(BuiltinFn::new("write_io", Type::Null, vec![], |_env, args| {
-                let (mut file, is_raw) = match &args[0] {
-                    Value::Int(i) => (unsafe { fs::File::from_raw_fd(*i as RawFd) }, true),
-                    Value::String(s) => (fs::File::options()
-                        .create(true)
-                        .write(true)
-                        .open(s)?, false),
-                    _ => return Err(Exception::InvalidType(Type::CharArray, args[0].ty())),
-                };
+            Value::Builtin(BuiltinFn::new(
+                "write_io",
+                Type::Null,
+                vec![],
+                |_env, args| {
+                    let (mut file, is_raw) = match &args[0] {
+                        Value::Int(i) => (unsafe { fs::File::from_raw_fd(*i as RawFd) }, true),
+                        Value::String(s) => (
+                            fs::File::options()
+                                .create(true)
+                                .write(true)
+                                .append(true)
+                                .open(s)?,
+                            false,
+                        ),
+                        _ => return Err(Exception::InvalidType(Type::CharArray, args[0].ty())),
+                    };
 
-                for arg in &args[1..] {
-                    arg.write(&mut file)?;
-                }
+                    for arg in &args[1..] {
+                        arg.write(&mut file)?;
+                    }
 
-                if is_raw {
-                    mem::forget(file);
-                }
+                    if is_raw {
+                        mem::forget(file);
+                    }
 
-                Ok(Value::Null)
-            })),
+                    Ok(Value::Null)
+                },
+            )),
         );
 
         for stmt in &self.stmts {
@@ -286,7 +317,7 @@ impl Literal {
             Literal::Int(i) => Ok(Value::Int(*i)),
             Literal::Float(f) => Ok(Value::Float(*f)),
             Literal::Char(c) => Ok(Value::Char(*c)),
-            Literal::CharArray(s) => Ok(Value::String(s[1..s.len()-1].to_string())),
+            Literal::CharArray(s) => Ok(Value::String(s[1..s.len() - 1].to_string())),
             Literal::Bit(b) => Ok(Value::Bit(*b)),
             Literal::Fn(f) => Ok(Value::Fn(f)),
             Literal::Array(a) => {
