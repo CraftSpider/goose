@@ -1,0 +1,47 @@
+
+$$$
+    hi
+$$$
+$ baz or bar not defined? Exceptions in checks are ignored!
+def foo: int (i: int) -> |baz != bar| [
+    $ runs once at the first instance of the method
+    once {
+        carryover baz = i;
+    }
+
+    unique bar = i;
+
+    print(i);
+    $ statement isn't checked in sync block
+    sync {
+        bar += 1;
+        baz += 1;
+    }
+    bar += 1;
+    $ dies here, returns bar
+    baz += 1;
+]
+
+def takes_fn: null (f: fn: null (int), a: int) -> |false| []
+
+print(foo(2));
+
+print(0b);
+print(1b);
+
+write(console, 0b); $ write_console(0b);
+write(error, 0b); $ write_error(0b);
+write(raw_file, 0b); $ write_file(0b);
+filename = "foo";
+write(filename, 0b); $ write_io(filename, 0b);
+
+$ console = stdout
+$ error = stderr
+$ raw_file = creates a new file - output, truncates
+$ int|string = writes raw binary to location
+
+$ Only valid if a already exists
+$ `a = b;`
+$ `carryover` later in the function is fine, as long as the variable hasn't been defined
+$ variables can't be redefined
+$ a variable gets its type from its first definition. No changing it after that

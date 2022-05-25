@@ -1,0 +1,36 @@
+
+$ A single-line comment
+
+$$$
+    A multi-line comment
+$$$
+
+$ An integer literal
+1;
+
+$ A float literal
+1.0;
+
+$ A bit literal
+0b; 1b;
+
+$ A char literal
+'a';
+
+$ A chararray literal
+"Hello World!";
+
+$ An array literal
+[1, 2, 3];
+
+$ A function literal
+fn: null () -> || [];
+
+$ A function definition
+def foo: null (arg: int) -> |true| []
+
+$ A function call
+foo(1);
+
+$ A type alias
+type integer = int;

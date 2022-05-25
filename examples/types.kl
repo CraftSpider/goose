@@ -1,0 +1,16 @@
+
+type Function = fn: null ();
+
+type Bit = bit;
+
+type Integer = int;
+
+type Float = float;
+
+type Character = char;
+
+type CharArray = chararray;
+
+type BitArray = [bit];
+
+type Null = null;
