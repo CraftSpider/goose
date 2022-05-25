@@ -119,3 +119,51 @@ if(1 == 1, fn: null () -> |stop| [
     unique stop = 1b
 ])
 ```
+
+# Sync and Once blocks
+
+There are time in goose where you may want parts of your function to run without checking the limit after
+each statement. For example, the following function will quit with an error before printing:
+
+```goose
+fn wrong: int () -> |bar == baz| [
+    unique baz = 2;
+    carryover bar = 1;
+    
+    bar += 1;
+    baz -= 1;
+    
+    write(console, "First iteration");
+]
+```
+
+To ensure that bar and baz are both altered at the same time, one can instead wrap them in a sync block.
+After doing that, the function will behave as expected: Printing once, then exiting when baz is reset to 2.
+
+```goose
+fn right: int () -> |bar == baz| [
+    unique baz = 2;
+    carryover bar = 1;
+    
+    sync {
+        bar += 1;
+        baz -= 1;
+    }
+    
+    write(console, "First iteration");
+]
+```
+
+The other useful kind of block available in goose is the `once` block, which is used to run code only on the first
+iteration of a function. It's considered good style to place `carryover` definitions inside a once block at the top
+of your file, if they require more than trivial initialization.
+
+```goose
+fn run_once: null () -> |foo == "Honk!"| [
+    once {
+        carryover foo = some_long_init();
+    }
+    
+    $ manipulate foo
+]
+```
