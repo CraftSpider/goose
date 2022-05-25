@@ -1,8 +1,7 @@
-
 use core::ops::Deref;
 
-mod parser;
 mod interp;
+mod parser;
 
 #[derive(Clone, Debug)]
 pub struct Assign {
@@ -146,8 +145,11 @@ impl Type {
             Type::Fn(ret, args) => format!(
                 "fn: {} ({})",
                 ret.pretty(),
-                args.iter().map(|ty| ty.pretty()).intersperse(String::from(" ")).collect::<String>(),
-            )
+                args.iter()
+                    .map(|ty| ty.pretty())
+                    .intersperse(String::from(" "))
+                    .collect::<String>(),
+            ),
         }
     }
 }

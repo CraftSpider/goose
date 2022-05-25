@@ -2,10 +2,8 @@ use core::fmt;
 use core::ops::Range;
 use logos::Logos;
 
-#[derive(Logos)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Logos, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Token<'a> {
-
     #[token("def")]
     Def,
     #[token("unique")]
@@ -136,7 +134,5 @@ impl fmt::Display for Token<'_> {
 }
 
 pub fn tokenize(file: &str) -> Vec<(Token<'_>, Range<usize>)> {
-    Token::lexer(file)
-        .spanned()
-        .collect()
+    Token::lexer(file).spanned().collect()
 }

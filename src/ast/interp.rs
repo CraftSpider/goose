@@ -1,63 +1,68 @@
-
-use crate::interp::{Env, Value, Result, Exception, BuiltinFn};
 use super::*;
+use crate::interp::{BuiltinFn, Env, Exception, Result, Value};
 
 impl Assign {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         let val = self.val.interpret(env)?;
 
         let out = match self.assign_op {
-            AssignOp::Eq => {
-                match self.ty {
-                    AssignTy::Unique => env.insert_var(&self.ident, val),
-                    AssignTy::CarryOver => if env.is_first_iter() {
+            AssignOp::Eq => match self.ty {
+                AssignTy::Unique => env.insert_var(&self.ident, val),
+                AssignTy::CarryOver => {
+                    if env.is_first_iter() {
                         env.insert_var(&self.ident, val)
                     } else {
                         &Value::Null
-                    },
-                    AssignTy::Default => if env.lookup_var(&self.ident).is_some() {
+                    }
+                }
+                AssignTy::Default => {
+                    if env.lookup_var(&self.ident).is_some() {
                         env.insert_var(&self.ident, val)
                     } else {
-                        return Err(Exception::NameNotFound(self.ident.clone()))
-                    },
+                        return Err(Exception::NameNotFound(self.ident.clone()));
+                    }
                 }
             },
             AssignOp::PlusEq => {
-                let old_val = env.lookup_var(&self.ident)
+                let old_val = env
+                    .lookup_var(&self.ident)
                     .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
                     .clone();
 
                 let new_val = old_val.op_add(env, val)?;
 
                 env.insert_var(&self.ident, new_val)
-            },
+            }
             AssignOp::SubEq => {
-                let old_val = env.lookup_var(&self.ident)
+                let old_val = env
+                    .lookup_var(&self.ident)
                     .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
                     .clone();
 
                 let new_val = old_val.op_sub(env, val)?;
 
                 env.insert_var(&self.ident, new_val)
-            },
+            }
             AssignOp::MulEq => {
-                let old_val = env.lookup_var(&self.ident)
+                let old_val = env
+                    .lookup_var(&self.ident)
                     .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
                     .clone();
 
                 let new_val = old_val.op_mul(env, val)?;
 
                 env.insert_var(&self.ident, new_val)
-            },
+            }
             AssignOp::DivEq => {
-                let old_val = env.lookup_var(&self.ident)
+                let old_val = env
+                    .lookup_var(&self.ident)
                     .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
                     .clone();
 
                 let new_val = old_val.op_div(env, val)?;
 
                 env.insert_var(&self.ident, new_val)
-            },
+            }
         };
 
         Ok(out.clone())
@@ -69,7 +74,8 @@ impl Expr {
         match self {
             Expr::FnCall(call) => call.interpret(env),
             Expr::Literal(lit) => lit.interpret(env),
-            Expr::Ident(i) => env.lookup_var(&i)
+            Expr::Ident(i) => env
+                .lookup_var(&i)
                 .cloned()
                 .ok_or_else(|| Exception::NameNotFound(i.clone())),
             Expr::BinOp(left, mid, right) => {
@@ -91,10 +97,9 @@ impl File {
         // Push the global variables scope
         env.push_scope();
         // Push global functions
-        env.insert_var("print", Value::Builtin(BuiltinFn::new(
-            Type::Null,
-            vec![],
-            |_env, args| {
+        env.insert_var(
+            "print",
+            Value::Builtin(BuiltinFn::new(Type::Null, vec![], |_env, args| {
                 for (idx, arg) in args.iter().enumerate() {
                     if idx != 0 {
                         print!(" ");
@@ -103,8 +108,8 @@ impl File {
                 }
                 println!();
                 Ok(Value::Null)
-            }
-        )));
+            })),
+        );
 
         for stmt in &self.stmts {
             stmt.interpret(env)?;
@@ -115,18 +120,19 @@ impl File {
 
 impl FnCall {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
-        let val = env.lookup_var(&self.name)
-            .cloned();
+        let val = env.lookup_var(&self.name).cloned();
 
         if let Some(Value::Fn(f)) = val {
-            let args = self.args
+            let args = self
+                .args
                 .iter()
                 .map(|expr| expr.interpret(env))
                 .collect::<Result<_>>()?;
 
             f.call(env, args)
         } else if let Some(Value::Builtin(b)) = val {
-            let args = self.args
+            let args = self
+                .args
                 .iter()
                 .map(|expr| expr.interpret(env))
                 .collect::<Result<Vec<_>>>()?;
@@ -164,7 +170,7 @@ impl FnDef {
                         Ok(Value::Null)
                     } else {
                         Err(Exception::InvalidType(self.ret.clone(), Type::Null))
-                    }
+                    };
                 }
             }
 
@@ -195,7 +201,8 @@ impl Literal {
             Literal::Bit(b) => Ok(Value::Bit(*b)),
             Literal::Fn(f) => Ok(Value::Fn(f)),
             Literal::Array(a) => {
-                let vals = a.iter()
+                let vals = a
+                    .iter()
                     .map(|expr| expr.interpret(env))
                     .collect::<Result<Vec<_>>>()?;
 
@@ -203,13 +210,13 @@ impl Literal {
                     let first_ty = val.ty();
                     for i in vals.iter().skip(1) {
                         if i.ty() != first_ty {
-                            return Err(Exception::InvalidType(first_ty, i.ty()))
+                            return Err(Exception::InvalidType(first_ty, i.ty()));
                         }
                     }
                 }
 
                 Ok(Value::Array(vals))
-            },
+            }
         }
     }
 }
@@ -217,19 +224,15 @@ impl Literal {
 impl Stmt {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         match self {
-            Stmt::FnDef(def) => {
-                def.define(env).map(|_| Value::Null)
-            },
-            Stmt::Assign(assign) => {
-                assign.interpret(env)
-            },
+            Stmt::FnDef(def) => def.define(env).map(|_| Value::Null),
+            Stmt::Assign(assign) => assign.interpret(env),
             Stmt::Sync(sync) => {
                 env.set_sync(true);
                 for stmt in sync {
                     stmt.interpret(env)?;
                 }
                 Ok(Value::Null)
-            },
+            }
             Stmt::Once(once) => {
                 if env.is_first_iter() {
                     for stmt in once {
@@ -238,9 +241,7 @@ impl Stmt {
                 }
                 Ok(Value::Null)
             }
-            Stmt::Expr(expr) => {
-                Ok(expr.interpret(env)?)
-            },
+            Stmt::Expr(expr) => Ok(expr.interpret(env)?),
             Stmt::TypeDef(name, ty) => {
                 env.insert_ty(name, ty.clone());
                 Ok(Value::Null)

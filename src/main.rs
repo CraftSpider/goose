@@ -2,18 +2,18 @@
 
 use std::process::ExitCode;
 
-mod token;
 mod ast;
-mod parser;
-mod interp;
 mod cmd;
+mod interp;
+mod parser;
+mod token;
 
 fn main() -> ExitCode {
-    use token::tokenize;
-    use parser::parse;
-    use interp::Env;
-    use cmd::{Command, Emit};
     use clap::Parser;
+    use cmd::{Command, Emit};
+    use interp::Env;
+    use parser::parse;
+    use token::tokenize;
 
     let args = Command::parse();
 
@@ -23,14 +23,17 @@ fn main() -> ExitCode {
         Ok(file) => file,
         Err(e) => {
             println!("Couldn't read provided file: {}", e);
-            return ExitCode::FAILURE
+            return ExitCode::FAILURE;
         }
     };
 
     let tokens = tokenize(&file);
 
     if args.should_emit(Emit::Tokens) {
-        println!("{:?}", tokens.iter().map(|(tok, _)| tok).collect::<Vec<_>>());
+        println!(
+            "{:?}",
+            tokens.iter().map(|(tok, _)| tok).collect::<Vec<_>>()
+        );
     }
 
     let ast = match parse(&tokens) {
@@ -38,8 +41,12 @@ fn main() -> ExitCode {
         Err(errs) => {
             for err in errs {
                 println!("Parse Failure: {}", err);
-                println!("at {}", &file[err.span().start.saturating_sub(10)..usize::min(err.span().end + 10, file.len())])
-            };
+                println!(
+                    "at {}",
+                    &file[err.span().start.saturating_sub(10)
+                        ..usize::min(err.span().end + 10, file.len())]
+                )
+            }
             return ExitCode::FAILURE;
         }
     };

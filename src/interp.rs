@@ -1,8 +1,7 @@
-
 use core::fmt;
 use std::collections::HashMap;
 
-use crate::ast::{Type, BinOp, Ident, FnDef};
+use crate::ast::{BinOp, FnDef, Ident, Type};
 
 pub type Result<T> = core::result::Result<T, Exception>;
 
@@ -17,18 +16,25 @@ impl fmt::Display for Exception {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Exception::InvalidType(expected, actual) => {
-                write!(f, "Expected type `{}`, got type `{}`", expected.pretty(), actual.pretty())
+                write!(
+                    f,
+                    "Expected type `{}`, got type `{}`",
+                    expected.pretty(),
+                    actual.pretty()
+                )
             }
             Exception::InvalidOp(left, op, right) => {
                 write!(
                     f,
-                   "Attempted to invoke operator {} on invalid types. Left: `{}`, Right: `{}`",
+                    "Attempted to invoke operator {} on invalid types. Left: `{}`, Right: `{}`",
                     op.pretty(),
                     left.pretty(),
                     right.pretty(),
                 )
             }
-            Exception::NameNotFound(name) => write!(f, "Attempted to access invalid identifier {}", &**name),
+            Exception::NameNotFound(name) => {
+                write!(f, "Attempted to access invalid identifier {}", &**name)
+            }
         }
     }
 }
@@ -37,7 +43,7 @@ impl fmt::Display for Exception {
 pub struct BuiltinFn {
     ret: Type,
     args: Vec<Type>,
-    handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>
+    handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>,
 }
 
 impl fmt::Debug for BuiltinFn {
@@ -54,13 +60,9 @@ impl BuiltinFn {
     pub fn new(
         ret: Type,
         args: Vec<Type>,
-        handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>
+        handler: for<'ip> fn(env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>>,
     ) -> BuiltinFn {
-        BuiltinFn {
-            ret,
-            args,
-            handler,
-        }
+        BuiltinFn { ret, args, handler }
     }
 
     pub fn invoke<'ip>(&self, env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>> {
@@ -95,7 +97,8 @@ impl<'ip> Env<'ip> {
     }
 
     pub fn lookup_var(&mut self, var: &str) -> Option<&Value<'ip>> {
-        let scope = self.value_stack
+        let scope = self
+            .value_stack
             .iter()
             .rev()
             .find(|scope| scope.contains_key(var));
@@ -150,9 +153,9 @@ impl<'ip> Value<'ip> {
                     Type::Null
                 };
                 Type::Array(Box::new(inner))
-            },
+            }
             Value::Fn(def) => Type::Fn(Box::new(def.ret_ty().clone()), def.arg_tys()),
-            Value::Builtin(def) => Type::Fn(Box::new(def.ret.clone()), def.args.clone())
+            Value::Builtin(def) => Type::Fn(Box::new(def.ret.clone()), def.args.clone()),
         }
     }
 

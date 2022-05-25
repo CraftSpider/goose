@@ -1,16 +1,13 @@
-
+use clap::{ArgEnum, Parser};
 use std::path::PathBuf;
-use clap::{Parser, ArgEnum};
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-#[derive(ArgEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, ArgEnum)]
 pub enum Emit {
     Tokens,
     Ast,
 }
 
-#[derive(Debug)]
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[clap(version, about, long_about = None)]
 pub struct Command {
     #[clap(parse(from_os_str))]
