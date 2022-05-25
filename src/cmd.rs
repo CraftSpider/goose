@@ -1,7 +1,7 @@
 use clap::{ArgEnum, Parser};
 use std::path::PathBuf;
 
-#[derive(Copy, Clone, Debug, PartialEq, ArgEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ArgEnum)]
 pub enum Emit {
     Tokens,
     Ast,

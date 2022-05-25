@@ -19,7 +19,7 @@ impl Assign {
             .map(|ty| ty.unwrap_or(AssignTy::Default))
             .then(Ident::parser())
             .then(AssignOp::parser())
-            .then(expr.clone())
+            .then(expr)
             .then_ignore(just(Token::SemiColon))
             .map(|(((ty, ident), assign_op), val)| Assign {
                 ty,
@@ -109,7 +109,7 @@ impl FnDef {
             )
             .then_ignore(just(Token::Arrow))
             .then(
-                expr.clone()
+                expr
                     .delimited_by(just(Token::Pipe), just(Token::Pipe)),
             )
             .then(
@@ -148,7 +148,7 @@ impl Literal {
             Token::Int(i) => Ok(Literal::Int(i128::from_str(i).unwrap())),
             Token::Float(f) => Ok(Literal::Float(f64::from_str(f).unwrap())),
             Token::Bit(b) => Ok(Literal::Bit(&b[0..1] == "1")),
-            Token::Char(c) => Ok(Literal::Char(c.chars().skip(1).next().unwrap())),
+            Token::Char(c) => Ok(Literal::Char(c.chars().nth(1).unwrap())),
             Token::Str(s) => Ok(Literal::CharArray(s.to_string())),
             _ => Err(Simple::expected_input_found(
                 span,
@@ -166,7 +166,7 @@ impl Literal {
             .clone()
             .separated_by(just(Token::Comma))
             .delimited_by(just(Token::OpenBracket), just(Token::CloseBracket))
-            .map(|expr| Literal::Array(expr)))
+            .map(Literal::Array))
         .or(just(Token::Fn)
             .ignore_then(just(Token::Colon))
             .ignore_then(Type::parser())

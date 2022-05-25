@@ -66,7 +66,7 @@ impl BuiltinFn {
     }
 
     pub fn invoke<'ip>(&self, env: &mut Env<'ip>, args: &[Value<'ip>]) -> Result<Value<'ip>> {
-        (self.handler)(env, &args)
+        (self.handler)(env, args)
     }
 }
 

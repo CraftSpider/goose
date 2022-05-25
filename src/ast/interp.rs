@@ -75,7 +75,7 @@ impl Expr {
             Expr::FnCall(call) => call.interpret(env),
             Expr::Literal(lit) => lit.interpret(env),
             Expr::Ident(i) => env
-                .lookup_var(&i)
+                .lookup_var(i)
                 .cloned()
                 .ok_or_else(|| Exception::NameNotFound(i.clone())),
             Expr::BinOp(left, mid, right) => {
