@@ -101,18 +101,7 @@ impl Expr {
                         args.insert(0, expr.interpret(env)?);
                     }
 
-                    f.call(env, args)?;
-                } else if let Value::Builtin(b) = f {
-                    let mut args = args
-                        .iter()
-                        .map(|val| val.interpret(env))
-                        .collect::<Result<Vec<_>>>()?;
-
-                    if let Some(expr) = expr {
-                        args.insert(0, expr.interpret(env)?);
-                    }
-
-                    b.invoke(env, &args)?;
+                    f.invoke(env, args)?;
                 } else {
                     return Err(Exception::InvalidType(
                         Type::Fn(Box::new(Type::Null), vec![]),
@@ -151,7 +140,7 @@ impl File {
         // Push global functions
         env.insert_var(
             "write_console",
-            Value::Builtin(BuiltinFn::new(
+            Value::Fn(BuiltinFn::new(
                 "write_console",
                 Type::Null,
                 vec![],
@@ -162,11 +151,11 @@ impl File {
                     }
                     Ok(Value::Null)
                 },
-            )),
+            ).into()),
         );
         env.insert_var(
             "write_error",
-            Value::Builtin(BuiltinFn::new(
+            Value::Fn(BuiltinFn::new(
                 "write_error",
                 Type::Null,
                 vec![],
@@ -177,11 +166,11 @@ impl File {
                     }
                     Ok(Value::Null)
                 },
-            )),
+            ).into()),
         );
         env.insert_var(
             "write_raw_file",
-            Value::Builtin(BuiltinFn::new(
+            Value::Fn(BuiltinFn::new(
                 "write_raw_file",
                 Type::Null,
                 vec![],
@@ -196,11 +185,11 @@ impl File {
                     }
                     Ok(Value::Null)
                 },
-            )),
+            ).into()),
         );
         env.insert_var(
             "write_io",
-            Value::Builtin(BuiltinFn::new(
+            Value::Fn(BuiltinFn::new(
                 "write_io",
                 Type::Null,
                 vec![],
@@ -228,7 +217,7 @@ impl File {
 
                     Ok(Value::Null)
                 },
-            )),
+            ).into()),
         );
 
         for stmt in &self.stmts {
@@ -249,15 +238,7 @@ impl FnCall {
                 .map(|expr| expr.interpret(env))
                 .collect::<Result<_>>()?;
 
-            f.call(env, args)
-        } else if let Some(Value::Builtin(b)) = val {
-            let args = self
-                .args
-                .iter()
-                .map(|expr| expr.interpret(env))
-                .collect::<Result<Vec<_>>>()?;
-
-            b.invoke(env, &args)
+            f.invoke(env, args)
         } else {
             Err(Exception::NameNotFound(self.name.clone()))
         }
@@ -266,11 +247,11 @@ impl FnCall {
 
 impl FnDef {
     pub fn define<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<()> {
-        env.insert_var(&self.name, Value::Fn(self));
+        env.insert_var(&self.name, Value::Fn(self.into()));
         Ok(())
     }
 
-    pub fn call<'ip>(&'ip self, env: &mut Env<'ip>, args: Vec<Value<'ip>>) -> Result<Value<'ip>> {
+    pub fn invoke<'ip>(&'ip self, env: &mut Env<'ip>, args: Vec<Value<'ip>>) -> Result<Value<'ip>> {
         env.push_scope();
 
         if self.args.len() != args.len() {
@@ -319,7 +300,7 @@ impl Literal {
             Literal::Char(c) => Ok(Value::Char(*c)),
             Literal::CharArray(s) => Ok(Value::String(s[1..s.len() - 1].to_string())),
             Literal::Bit(b) => Ok(Value::Bit(*b)),
-            Literal::Fn(f) => Ok(Value::Fn(f)),
+            Literal::Fn(f) => Ok(Value::Fn(f.into())),
             Literal::Array(a) => {
                 let vals = a
                     .iter()

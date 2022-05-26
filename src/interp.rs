@@ -143,6 +143,54 @@ impl<'ip> Env<'ip> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum Fn<'ip> {
+    User(&'ip FnDef),
+    Builtin(BuiltinFn),
+}
+
+impl<'ip> Fn<'ip> {
+    pub fn name(&self) -> &str {
+        match self {
+            Fn::User(fd) => fd.name(),
+            Fn::Builtin(b) => &*b.name,
+        }
+    }
+
+    pub fn ret_ty(&self) -> &Type {
+        match self {
+            Fn::User(fd) => fd.ret_ty(),
+            Fn::Builtin(b) => &b.ret,
+        }
+    }
+
+    pub fn arg_tys(&self) -> Vec<Type> {
+        match self {
+            Fn::User(fd) => fd.arg_tys(),
+            Fn::Builtin(b) => b.args.clone(),
+        }
+    }
+
+    pub fn invoke(&self, env: &mut Env<'ip>, args: Vec<Value<'ip>>) -> Result<Value<'ip>> {
+        match self {
+            Fn::User(fd) => fd.invoke(env, args),
+            Fn::Builtin(b) => b.invoke(env, &args),
+        }
+    }
+}
+
+impl<'ip> From<&'ip FnDef> for Fn<'ip> {
+    fn from(fd: &'ip FnDef) -> Self {
+        Fn::User(fd)
+    }
+}
+
+impl From<BuiltinFn> for Fn<'_> {
+    fn from(b: BuiltinFn) -> Self {
+        Fn::Builtin(b)
+    }
+}
+
 // TODO: This should instead probably be a type + some data. This will make it more complicated,
 //       but allows types to be defined in terms of goose code in the future
 #[derive(Clone, Debug)]
@@ -154,8 +202,7 @@ pub enum Value<'ip> {
     Char(char),
     String(String),
     Array(Vec<Value<'ip>>),
-    Fn(&'ip FnDef),
-    Builtin(BuiltinFn),
+    Fn(Fn<'ip>),
 }
 
 impl<'ip> Value<'ip> {
@@ -176,7 +223,6 @@ impl<'ip> Value<'ip> {
                 Type::Array(Box::new(inner))
             }
             Value::Fn(def) => Type::Fn(Box::new(def.ret_ty().clone()), def.arg_tys()),
-            Value::Builtin(def) => Type::Fn(Box::new(def.ret.clone()), def.args.clone()),
         }
     }
 
@@ -205,7 +251,6 @@ impl<'ip> Value<'ip> {
                 write!(w, "]")?;
             }
             Value::Fn(f) => write!(w, "<fn {}>", f.name())?,
-            Value::Builtin(b) => write!(w, "<builtin {}>", &*b.name)?,
         };
         Ok(())
     }
@@ -248,7 +293,7 @@ impl<'ip> PartialEq for Value<'ip> {
         match (self, other) {
             (Value::Int(left), Value::Int(right)) => left == right,
             (Value::Float(left), Value::Float(right)) => left == right,
-            (Value::Fn(left), Value::Fn(right)) => std::ptr::eq(*left, *right),
+            (Value::Fn(left), Value::Fn(right)) => std::ptr::eq(left, right),
             _ => false,
         }
     }

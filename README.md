@@ -12,6 +12,10 @@ What this language does have:
 
 The language syntax and semantics are designed to be annoying, and sometimes difficult, while still being usable.
 
+## Getting Started
+
+See the [Tutorial](docs/tutorial.md)
+
 ## Reference
 
 The behavior of this implementation is considered the normative reference for goose. If the written documentation
