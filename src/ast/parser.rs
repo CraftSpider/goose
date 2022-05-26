@@ -289,7 +289,7 @@ impl WriteTy {
         just(Token::Ident("console"))
             .to(WriteTy::Console)
             .or(just(Token::Ident("error")).to(WriteTy::Error))
-            .or(just(Token::Ident("raw_file")).to(WriteTy::RawFile))
+            .or(just(Token::Ident("honk")).to(WriteTy::RawFile))
             .or(expr.map(|expr| WriteTy::Other(Box::new(expr))))
     }
 }

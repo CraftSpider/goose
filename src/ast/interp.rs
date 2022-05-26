@@ -82,7 +82,7 @@ impl Expr {
                 let (w, expr) = match ty {
                     WriteTy::Console => ("write_console", None),
                     WriteTy::Error => ("write_error", None),
-                    WriteTy::RawFile => ("write_raw_file", None),
+                    WriteTy::RawFile => ("write_honk", None),
                     WriteTy::Other(expr) => ("write_io", Some(expr)),
                 };
 
@@ -169,9 +169,9 @@ impl File {
             ).into()),
         );
         env.insert_var(
-            "write_raw_file",
+            "write_honk",
             Value::Fn(BuiltinFn::new(
-                "write_raw_file",
+                "write_honk",
                 Type::Null,
                 vec![],
                 |_env, args| {

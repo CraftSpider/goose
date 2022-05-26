@@ -5,8 +5,8 @@ write_console("Hello World!");
 write(error, "Error!");
 write_error("Error!");
 
-write(raw_file, "Raw File");
-write_raw_file("Raw File");
+write(honk, "Honk!");
+write_honk("Honk!");
 
 unique file = "file.txt";
 write(file, "This is a file");

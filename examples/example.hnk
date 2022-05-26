@@ -31,13 +31,13 @@ write(console, 1b);
 
 write(console, 0b); $ write_console(0b);
 write(error, 0b); $ write_error(0b);
-write(raw_file, 0b); $ write_file(0b);
+write(honk, 0b); $ write_honk(0b);
 unique filename = "foo";
 write(filename, 0b); $ write_io(filename, 0b);
 
 $ console = stdout
 $ error = stderr
-$ raw_file = creates a new file - output, truncates
+$ honk = creates a new file - output, truncates
 $ int|string = writes raw binary to location
 
 $ Only valid if a already exists
