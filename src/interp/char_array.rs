@@ -3,7 +3,13 @@ use crate::ast::{BinOp, Type};
 use crate::interp::Exception;
 use super::{ValItem, Value, Fn, Result};
 
-pub struct CharArray(pub(crate) String);
+pub struct CharArray(String);
+
+impl CharArray {
+    pub fn new(str: String) -> CharArray {
+        CharArray(str)
+    }
+}
 
 unsafe impl<'ip> ValItem<'ip> for CharArray {
     fn allow_cast(ty: Type) -> Result<()> {

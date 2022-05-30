@@ -242,7 +242,7 @@ impl FnDef {
         loop {
             if self.stmts.is_empty() {
                 let lim = self.limit.interpret(env)
-                    .map(|v| matches!(v.downcast::<Bit>(), Ok(Bit(true))))
+                    .map(|v| v.downcast::<Bit>().map(Bit::val).unwrap_or(false) == true)
                     .unwrap_or(false);
 
                 if lim {
@@ -257,7 +257,7 @@ impl FnDef {
             for stmt in &self.stmts {
                 let val = stmt.interpret(env)?;
                 let lim = self.limit.interpret(env)
-                    .map(|v| matches!(v.downcast::<Bit>(), Ok(Bit(true))))
+                    .map(|v| v.downcast::<Bit>().map(Bit::val).unwrap_or(false) == true)
                     .unwrap_or(false);
 
                 if lim {
@@ -277,11 +277,11 @@ impl FnDef {
 impl Literal {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         match self {
-            Literal::Int(i) => Ok(Value::new(Int(*i))),
-            Literal::Float(f) => Ok(Value::new(Float(*f))),
-            Literal::Char(c) => Ok(Value::new(Char(*c))),
-            Literal::CharArray(s) => Ok(Value::new(CharArray(s[1..s.len() - 1].to_string()))),
-            Literal::Bit(b) => Ok(Value::new(Bit(*b))),
+            Literal::Int(i) => Ok(Value::new(Int::new(*i))),
+            Literal::Float(f) => Ok(Value::new(Float::new(*f))),
+            Literal::Char(c) => Ok(Value::new(Char::new(*c))),
+            Literal::CharArray(s) => Ok(Value::new(CharArray::new(s[1..s.len() - 1].to_string()))),
+            Literal::Bit(b) => Ok(Value::new(Bit::new(*b))),
             Literal::Fn(f) => Ok(Value::new::<Fn<'_>>(f.into())),
             Literal::Array(a) => {
                 let vals = a

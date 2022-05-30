@@ -2,7 +2,17 @@ use crate::ast::{BinOp, Type};
 use crate::interp::Exception;
 use super::{ValItem, Value, Fn, Result};
 
-pub struct Float(pub(crate) f64);
+pub struct Float(f64);
+
+impl Float {
+    pub fn new(f: f64) -> Float {
+        Float(f)
+    }
+
+    pub fn val(&self) -> f64 {
+        self.0
+    }
+}
 
 unsafe impl<'ip> ValItem<'ip> for Float {
     fn allow_cast(ty: Type) -> Result<()> {

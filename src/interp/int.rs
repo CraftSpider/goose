@@ -6,7 +6,17 @@ use crate::interp::Bit;
 use super::{ValItem, Value, Fn, Result, BuiltinFn, Exception};
 
 #[derive(Clone)]
-pub struct Int(pub(crate) i128);
+pub struct Int(i128);
+
+impl Int {
+    pub fn new(val: i128) -> Int {
+        Int(val)
+    }
+
+    pub fn val(&self) -> i128 {
+        self.0
+    }
+}
 
 unsafe impl<'ip> ValItem<'ip> for Int {
     fn allow_cast(ty: Type) -> Result<()> {
@@ -47,7 +57,7 @@ unsafe impl<'ip> ValItem<'ip> for Int {
                     let a = args[0].downcast::<Int>()?;
                     let b = args[1].downcast::<Int>()?;
 
-                    Ok(Value::new(Bit(a.0 == b.0)))
+                    Ok(Value::new(Bit::new(a.0 == b.0)))
                 }
             ).into()),
             BinOp::Neq => Some(BuiltinFn::new(
@@ -62,7 +72,7 @@ unsafe impl<'ip> ValItem<'ip> for Int {
                     let a = args[0].downcast::<Int>()?;
                     let b = args[1].downcast::<Int>()?;
 
-                    Ok(Value::new(Bit(a.0 != b.0)))
+                    Ok(Value::new(Bit::new(a.0 != b.0)))
                 }
             ).into()),
             BinOp::Add => Some(BuiltinFn::new(

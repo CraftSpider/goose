@@ -2,7 +2,17 @@ use crate::ast::{BinOp, Type};
 use crate::interp::{BuiltinFn, Exception};
 use super::{Value, ValItem, Fn, Result};
 
-pub struct Bit(pub(crate) bool);
+pub struct Bit(bool);
+
+impl Bit {
+    pub fn new(b: bool) -> Bit {
+        Bit(b)
+    }
+
+    pub fn val(&self) -> bool {
+        self.0
+    }
+}
 
 unsafe impl<'ip> ValItem<'ip> for Bit {
     fn allow_cast(ty: Type) -> Result<()> {

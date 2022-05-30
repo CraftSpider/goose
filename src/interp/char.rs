@@ -2,7 +2,13 @@ use crate::ast::{BinOp, Type};
 use crate::interp::Exception;
 use super::{ValItem, Value, Fn, Result};
 
-pub struct Char(pub(crate) char);
+pub struct Char(char);
+
+impl Char {
+    pub fn new(c: char) -> Char {
+        Char(c)
+    }
+}
 
 unsafe impl<'ip> ValItem<'ip> for Char {
     fn allow_cast(ty: Type) -> Result<()> {
