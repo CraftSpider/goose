@@ -1,6 +1,5 @@
-use crate::ast::{BinOp, Type};
-use crate::interp::Exception;
-use super::{ValItem, Value, Fn, Result};
+use crate::ast::Type;
+use super::{ValItem, Value, Fn, Exception, Result, Op};
 
 unsafe impl<'ip> ValItem<'ip> for Type {
     fn allow_cast(ty: Type) -> Result<()> {
@@ -24,7 +23,7 @@ unsafe impl<'ip> ValItem<'ip> for Type {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         todo!()
     }
 }

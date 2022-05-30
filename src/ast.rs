@@ -37,25 +37,13 @@ pub enum BinOp {
     Div,
 }
 
-impl BinOp {
-    pub fn pretty(&self) -> String {
-        match self {
-            BinOp::Eq => String::from("=="),
-            BinOp::Neq => String::from("!="),
-            BinOp::Add => String::from("+"),
-            BinOp::Sub => String::from("-"),
-            BinOp::Mul => String::from("*"),
-            BinOp::Div => String::from("/"),
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub enum Expr {
     FnCall(FnCall),
     Write(WriteTy, Vec<Expr>),
     Literal(Literal),
     Ident(Ident),
+    UnOp(UnOp, Box<Expr>),
     BinOp(Box<Expr>, BinOp, Box<Expr>),
 }
 
@@ -157,6 +145,12 @@ impl Type {
             ),
         }
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum UnOp {
+    Inv,
+    Neg,
 }
 
 #[derive(Clone, Debug)]

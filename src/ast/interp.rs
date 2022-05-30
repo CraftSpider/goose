@@ -1,5 +1,6 @@
 use super::*;
-use crate::interp::{BuiltinFn, Env, Exception, Result, Value, Int, CharArray, Fn, Bit, Float, Char, Array};
+use crate::interp::{BuiltinFn, Env, Exception, Result, Value, Int, CharArray, Fn, Bit, Float, Char, Array, Op};
+
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::{fs, io, mem};
 
@@ -31,10 +32,10 @@ impl Assign {
             },
             AssignOp::PlusEq | AssignOp::SubEq | AssignOp::MulEq | AssignOp::DivEq => {
                 let op = match self.assign_op {
-                    AssignOp::PlusEq => BinOp::Add,
-                    AssignOp::SubEq => BinOp::Sub,
-                    AssignOp::MulEq => BinOp::Mul,
-                    AssignOp::DivEq => BinOp::Div,
+                    AssignOp::PlusEq => Op::Add,
+                    AssignOp::SubEq => Op::Sub,
+                    AssignOp::MulEq => Op::Mul,
+                    AssignOp::DivEq => Op::Div,
                     _ => unreachable!(),
                 };
 
@@ -45,7 +46,7 @@ impl Assign {
 
                 let new_val = old_val
                     .get_op(op)
-                    .ok_or_else(|| Exception::InvalidOp(old_val.ty(), op, val.ty()))?
+                    .ok_or_else(|| Exception::InvalidOp(op, old_val.ty(), Some(val.ty())))?
                     .invoke(env, vec![old_val, val])?;
 
                 env.insert_var(&self.ident, new_val)
@@ -93,12 +94,22 @@ impl Expr {
                 .lookup_var(i)
                 .cloned()
                 .ok_or_else(|| Exception::NameNotFound(i.clone())),
-            Expr::BinOp(left, mid, right) => {
+            &Expr::UnOp(op, ref expr) => {
+                let op = op.into();
+                let rval = expr.interpret(env)?;
+
+
+                rval.get_op(op)
+                    .ok_or_else(|| Exception::InvalidOp(op, rval.ty(), None))?
+                    .invoke(env, vec![rval])
+            }
+            &Expr::BinOp(ref left, op, ref right) => {
+                let op = op.into();
                 let lval = left.interpret(env)?;
                 let rval = right.interpret(env)?;
 
-                lval.get_op(*mid)
-                    .ok_or_else(|| Exception::InvalidOp(lval.ty(), *mid, rval.ty()))?
+                lval.get_op(op)
+                    .ok_or_else(|| Exception::InvalidOp(op, lval.ty(), Some(rval.ty())))?
                     .invoke(env, vec![lval, rval])
             }
         }

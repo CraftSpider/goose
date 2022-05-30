@@ -1,6 +1,5 @@
-use crate::ast::{BinOp, Type};
-use crate::interp::{BuiltinFn, Exception};
-use super::{Value, ValItem, Fn, Result};
+use crate::ast::Type;
+use super::{Value, ValItem, Fn, Result, Op, BuiltinFn, Exception};
 
 pub struct Bit(bool);
 
@@ -35,9 +34,9 @@ unsafe impl<'ip> ValItem<'ip> for Bit {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         match op {
-            BinOp::Eq => Some(BuiltinFn::new(
+            Op::Eq => Some(BuiltinFn::new(
                 "bit_eq",
                 Type::named("bit"),
                 vec![Type::named("bit"), Type::named("bit")],

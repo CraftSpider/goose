@@ -1,9 +1,8 @@
 use std::io;
 use std::io::Write;
 use std::ops::Deref;
-use crate::ast::{BinOp, Type};
-use crate::interp::Bit;
-use super::{ValItem, Value, Fn, Result, BuiltinFn, Exception};
+use crate::ast::Type;
+use super::{ValItem, Value, Op, Bit, Fn, Result, BuiltinFn, Exception};
 
 #[derive(Clone)]
 pub struct Int(i128);
@@ -43,9 +42,9 @@ unsafe impl<'ip> ValItem<'ip> for Int {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         match op {
-            BinOp::Eq => Some(BuiltinFn::new(
+            Op::Eq => Some(BuiltinFn::new(
                 "int_eq",
                 Type::named("bit"),
                 vec![Type::named("int"), Type::named("int")],
@@ -60,7 +59,7 @@ unsafe impl<'ip> ValItem<'ip> for Int {
                     Ok(Value::new(Bit::new(a.0 == b.0)))
                 }
             ).into()),
-            BinOp::Neq => Some(BuiltinFn::new(
+            Op::Neq => Some(BuiltinFn::new(
                 "int_eq",
                 Type::named("bit"),
                 vec![Type::named("int"), Type::named("int")],
@@ -75,7 +74,7 @@ unsafe impl<'ip> ValItem<'ip> for Int {
                     Ok(Value::new(Bit::new(a.0 != b.0)))
                 }
             ).into()),
-            BinOp::Add => Some(BuiltinFn::new(
+            Op::Add => Some(BuiltinFn::new(
                 "int_add",
                 Type::named("int"),
                 vec![Type::named("int"), Type::named("int")],

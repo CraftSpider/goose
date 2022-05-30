@@ -1,6 +1,5 @@
-use crate::ast::{BinOp, Type};
-use crate::interp::Exception;
-use super::{ValItem, Value, Fn, Result};
+use crate::ast::Type;
+use super::{ValItem, Value, Fn, Result, Exception, Op};
 
 pub struct Null;
 
@@ -25,7 +24,7 @@ unsafe impl<'ip> ValItem<'ip> for Null {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         todo!()
     }
 }

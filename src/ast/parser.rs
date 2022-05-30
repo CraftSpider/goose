@@ -74,7 +74,13 @@ impl Expr {
                     .then_ignore(just(Token::CloseParen))
                     .map(|(ty, exprs)| Expr::Write(ty, exprs)))
                 .or(FnCall::parser(expr).map(Expr::FnCall))
-                .or(Ident::parser().map(Expr::Ident));
+                .or(Ident::parser().map(Expr::Ident))
+                .boxed();
+
+            let unary = UnOp::parser()
+                .repeated()
+                .then(atom)
+                .foldr(|op, expr| Expr::UnOp(op, Box::new(expr)));
 
             let bin_parsers = [
                 BinOp::mul_parser().boxed(),
@@ -82,7 +88,7 @@ impl Expr {
                 BinOp::cmp_parser().boxed(),
             ];
 
-            let mut binary = atom.boxed();
+            let mut binary = unary.boxed();
 
             for op_parser in bin_parsers {
                 binary = binary
@@ -271,6 +277,13 @@ impl Type {
                 )
                 .map(|(ret, args)| Type::Fn(Box::new(ret), args)))
         })
+    }
+}
+
+impl UnOp {
+    pub fn parser<'a>() -> Parser!['a, Self] {
+        just(Token::Bang).to(UnOp::Inv)
+            .or(just(Token::Dash).to(UnOp::Neg))
     }
 }
 

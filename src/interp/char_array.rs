@@ -1,7 +1,6 @@
 use std::ops::Deref;
-use crate::ast::{BinOp, Type};
-use crate::interp::Exception;
-use super::{ValItem, Value, Fn, Result};
+use crate::ast::Type;
+use super::{ValItem, Op, Exception, Value, Fn, Result};
 
 pub struct CharArray(String);
 
@@ -32,7 +31,7 @@ unsafe impl<'ip> ValItem<'ip> for CharArray {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         todo!()
     }
 }

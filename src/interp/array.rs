@@ -1,7 +1,6 @@
 
-use crate::ast::{BinOp, Type};
-use crate::interp::Exception;
-use super::{ValItem, Value, Fn, Result};
+use crate::ast::Type;
+use super::{ValItem, Value, Fn, Result, Exception, Op};
 
 pub struct Array<'ip>(pub(crate) Vec<Value<'ip>>);
 
@@ -29,7 +28,7 @@ unsafe impl<'ip> ValItem<'ip> for Array<'ip> {
         None
     }
 
-    fn get_op(&self, _op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, _op: Op) -> Option<Fn<'ip>> {
         todo!()
     }
 }

@@ -1,7 +1,6 @@
 use core::fmt;
 use std::collections::HashMap;
 use std::io;
-use std::io::Error;
 use std::ptr::NonNull;
 
 mod array;
@@ -22,14 +21,14 @@ pub use func::Fn;
 pub use self::char::Char;
 pub use float::Float;
 
-use crate::ast::{BinOp, Ident, Type};
+use crate::ast::{BinOp, Ident, Type, UnOp};
 
 pub type Result<T> = core::result::Result<T, Exception>;
 
 #[derive(Debug)]
 pub enum Exception {
     InvalidType(Type, Type),
-    InvalidOp(Type, BinOp, Type),
+    InvalidOp(Op, Type, Option<Type>),
     NameNotFound(Ident),
     Io,
 }
@@ -45,12 +44,20 @@ impl fmt::Display for Exception {
                     actual.pretty()
                 )
             }
-            Exception::InvalidOp(left, op, right) => {
+            Exception::InvalidOp(op, left, Some(right)) => {
                 write!(
                     f,
-                    "Attempted to invoke operator {} on invalid types. Left: `{}`, Right: `{}`",
+                    "Attempted to invoke binary operator {} on invalid types. Left: `{}`, Right: `{}`",
                     op.pretty(),
                     left.pretty(),
+                    right.pretty(),
+                )
+            }
+            Exception::InvalidOp(op, right, None) => {
+                write!(
+                    f,
+                    "Attempted to invoke unary operator {} on invalid type `{}`",
+                    op.pretty(),
                     right.pretty(),
                 )
             }
@@ -65,8 +72,59 @@ impl fmt::Display for Exception {
 }
 
 impl From<io::Error> for Exception {
-    fn from(_: Error) -> Self {
+    fn from(_: io::Error) -> Self {
         Exception::Io
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Op {
+    Inv,
+    Neg,
+
+    Eq,
+    Neq,
+
+    Add,
+    Sub,
+    Mul,
+    Div,
+}
+
+impl Op {
+    pub fn pretty(&self) -> String {
+        match self {
+            Op::Inv => String::from("!"),
+            Op::Neg => String::from("-"),
+            Op::Eq => String::from("=="),
+            Op::Neq => String::from("!="),
+            Op::Add => String::from("+"),
+            Op::Sub => String::from("-"),
+            Op::Mul => String::from("*"),
+            Op::Div => String::from("/"),
+        }
+    }
+}
+
+impl From<UnOp> for Op {
+    fn from(op: UnOp) -> Self {
+        match op {
+            UnOp::Inv => Op::Inv,
+            UnOp::Neg => Op::Neg,
+        }
+    }
+}
+
+impl From<BinOp> for Op {
+    fn from(op: BinOp) -> Self {
+        match op {
+            BinOp::Eq => Op::Eq,
+            BinOp::Neq => Op::Neq,
+            BinOp::Add => Op::Add,
+            BinOp::Sub => Op::Sub,
+            BinOp::Mul => Op::Mul,
+            BinOp::Div => Op::Div,
+        }
     }
 }
 
@@ -165,7 +223,7 @@ pub unsafe trait ValItem<'ip>: 'ip {
         Ok(())
     }
     fn get_field(&self, name: &str) -> Option<Value<'ip>>;
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>>;
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>>;
 }
 
 impl<'ip> dyn ValItem<'ip> {
@@ -251,7 +309,7 @@ impl<'ip> Value<'ip> {
         Ok(())
     }
 
-    pub fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    pub fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         // TODO: Handle fallback to inverting Eq/Neq
         self.data.get_op(op)
     }

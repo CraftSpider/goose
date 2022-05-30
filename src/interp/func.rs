@@ -1,5 +1,5 @@
-use crate::ast::{BinOp, FnDef, Type};
-use super::{Value, ValItem, BuiltinFn, Env, Result, Exception};
+use crate::ast::{FnDef, Type};
+use super::{Value, ValItem, Op, BuiltinFn, Env, Result, Exception};
 
 #[derive(Clone, Debug)]
 pub enum Fn<'ip> {
@@ -59,7 +59,7 @@ unsafe impl<'ip> ValItem<'ip> for Fn<'ip> {
         None
     }
 
-    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+    fn get_op(&self, op: Op) -> Option<Fn<'ip>> {
         todo!()
     }
 }
