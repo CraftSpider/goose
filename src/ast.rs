@@ -99,7 +99,7 @@ impl FnDef {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ident(pub(crate) String);
 
 impl Deref for Ident {
@@ -133,25 +133,19 @@ pub enum Stmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
-    Null,
-    Int,
-    Float,
-    Char,
-    CharArray,
-    Bit,
+    Named(Ident),
     Array(Box<Type>),
     Fn(Box<Type>, Vec<Type>),
 }
 
 impl Type {
+    pub(crate) fn named(name: &str) -> Type {
+        Type::Named(Ident(name.to_string()))
+    }
+
     pub fn pretty(&self) -> String {
         match self {
-            Type::Null => String::from("null"),
-            Type::Int => String::from("int"),
-            Type::Float => String::from("float"),
-            Type::Char => String::from("char"),
-            Type::CharArray => String::from("chararray"),
-            Type::Bit => String::from("bit"),
+            Type::Named(name) => String::from(&**name),
             Type::Array(inner) => format!("[{}]", inner.pretty()),
             Type::Fn(ret, args) => format!(
                 "fn: {} ({})",

@@ -1,10 +1,11 @@
 use super::*;
-use crate::interp::{BuiltinFn, Env, Exception, Result, Value};
+use crate::interp::{BuiltinFn, Env, Exception, Result, Value, Int, CharArray, Fn, Bit, Float, Char, Array};
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::{fs, io, mem};
 
 impl Assign {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
+        let null = Value::null();
         let val = self.val.interpret(env)?;
 
         let out = match self.assign_op {
@@ -14,7 +15,7 @@ impl Assign {
                     if env.is_first_iter() {
                         env.insert_var(&self.ident, val)
                     } else {
-                        &Value::Null
+                        &null
                     }
                 }
                 AssignTy::Default => {
@@ -28,43 +29,24 @@ impl Assign {
                     }
                 }
             },
-            AssignOp::PlusEq => {
+            AssignOp::PlusEq | AssignOp::SubEq | AssignOp::MulEq | AssignOp::DivEq => {
+                let op = match self.assign_op {
+                    AssignOp::PlusEq => BinOp::Add,
+                    AssignOp::SubEq => BinOp::Sub,
+                    AssignOp::MulEq => BinOp::Mul,
+                    AssignOp::DivEq => BinOp::Div,
+                    _ => unreachable!(),
+                };
+
                 let old_val = env
                     .lookup_var(&self.ident)
                     .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
                     .clone();
 
-                let new_val = old_val.op_add(env, val)?;
-
-                env.insert_var(&self.ident, new_val)
-            }
-            AssignOp::SubEq => {
-                let old_val = env
-                    .lookup_var(&self.ident)
-                    .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
-                    .clone();
-
-                let new_val = old_val.op_sub(env, val)?;
-
-                env.insert_var(&self.ident, new_val)
-            }
-            AssignOp::MulEq => {
-                let old_val = env
-                    .lookup_var(&self.ident)
-                    .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
-                    .clone();
-
-                let new_val = old_val.op_mul(env, val)?;
-
-                env.insert_var(&self.ident, new_val)
-            }
-            AssignOp::DivEq => {
-                let old_val = env
-                    .lookup_var(&self.ident)
-                    .ok_or_else(|| Exception::NameNotFound(self.ident.clone()))?
-                    .clone();
-
-                let new_val = old_val.op_div(env, val)?;
+                let new_val = old_val
+                    .get_op(op)
+                    .ok_or_else(|| Exception::InvalidOp(old_val.ty(), op, val.ty()))?
+                    .invoke(env, vec![old_val, val])?;
 
                 env.insert_var(&self.ident, new_val)
             }
@@ -91,25 +73,20 @@ impl Expr {
                     .ok_or_else(|| Exception::NameNotFound(Ident(w.to_string())))?
                     .clone();
 
-                if let Value::Fn(f) = f {
-                    let mut args = args
-                        .iter()
-                        .map(|val| val.interpret(env))
-                        .collect::<Result<Vec<_>>>()?;
+                let f = f.downcast::<Fn<'_>>()?;
 
-                    if let Some(expr) = expr {
-                        args.insert(0, expr.interpret(env)?);
-                    }
+                let mut args = args
+                    .iter()
+                    .map(|val| val.interpret(env))
+                    .collect::<Result<Vec<_>>>()?;
 
-                    f.invoke(env, args)?;
-                } else {
-                    return Err(Exception::InvalidType(
-                        Type::Fn(Box::new(Type::Null), vec![]),
-                        f.ty(),
-                    ));
-                };
+                if let Some(expr) = expr {
+                    args.insert(0, expr.interpret(env)?);
+                }
 
-                Ok(Value::Null)
+                f.invoke(env, args)?;
+
+                Ok(Value::null())
             }
             Expr::Literal(lit) => lit.interpret(env),
             Expr::Ident(i) => env
@@ -120,14 +97,9 @@ impl Expr {
                 let lval = left.interpret(env)?;
                 let rval = right.interpret(env)?;
 
-                match mid {
-                    BinOp::Eq => Ok(Value::Bit(lval == rval)),
-                    BinOp::Neq => Ok(Value::Bit(lval != rval)),
-                    BinOp::Add => lval.op_add(env, rval),
-                    BinOp::Sub => lval.op_sub(env, rval),
-                    BinOp::Mul => lval.op_mul(env, rval),
-                    BinOp::Div => lval.op_div(env, rval),
-                }
+                lval.get_op(*mid)
+                    .ok_or_else(|| Exception::InvalidOp(lval.ty(), *mid, rval.ty()))?
+                    .invoke(env, vec![lval, rval])
             }
         }
     }
@@ -137,42 +109,44 @@ impl File {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<()> {
         // Push the global variables scope
         env.push_scope();
+        // Push global variables
+        env.insert_var("int", Value::new(Type::named("int")));
         // Push global functions
         env.insert_var(
             "write_console",
-            Value::Fn(BuiltinFn::new(
+            Value::new::<Fn<'_>>(BuiltinFn::new(
                 "write_console",
-                Type::Null,
+                Type::named("null"),
                 vec![],
                 |_env, args| {
                     let mut w = io::stdout();
                     for arg in args {
                         arg.write(&mut w)?;
                     }
-                    Ok(Value::Null)
+                    Ok(Value::null())
                 },
             ).into()),
         );
         env.insert_var(
             "write_error",
-            Value::Fn(BuiltinFn::new(
+            Value::new::<Fn<'_>>(BuiltinFn::new(
                 "write_error",
-                Type::Null,
+                Type::named("null"),
                 vec![],
                 |_env, args| {
                     let mut w = io::stderr();
                     for arg in args {
                         arg.write(&mut w)?;
                     }
-                    Ok(Value::Null)
+                    Ok(Value::null())
                 },
             ).into()),
         );
         env.insert_var(
             "write_honk",
-            Value::Fn(BuiltinFn::new(
+            Value::new::<Fn<'_>>(BuiltinFn::new(
                 "write_honk",
-                Type::Null,
+                Type::named("null"),
                 vec![],
                 |_env, args| {
                     let mut w = fs::File::options()
@@ -183,28 +157,30 @@ impl File {
                     for arg in args {
                         arg.write(&mut w)?;
                     }
-                    Ok(Value::Null)
+                    Ok(Value::null())
                 },
             ).into()),
         );
         env.insert_var(
             "write_io",
-            Value::Fn(BuiltinFn::new(
+            Value::new::<Fn<'_>>(BuiltinFn::new(
                 "write_io",
-                Type::Null,
+                Type::named("null"),
                 vec![],
-                |_env, args| {
-                    let (mut file, is_raw) = match &args[0] {
-                        Value::Int(i) => (unsafe { fs::File::from_raw_fd(*i as RawFd) }, true),
-                        Value::String(s) => (
+                |_env, args: &[Value<'_>]| {
+                    let (mut file, is_raw) = if let Ok(i) = args[0].downcast::<Int>() {
+                        (unsafe { fs::File::from_raw_fd(**i as RawFd) }, true)
+                    } else if let Ok(s) = args[0].downcast::<CharArray>() {
+                        (
                             fs::File::options()
                                 .create(true)
                                 .write(true)
                                 .append(true)
-                                .open(s)?,
+                                .open(&**s)?,
                             false,
-                        ),
-                        _ => return Err(Exception::InvalidType(Type::CharArray, args[0].ty())),
+                        )
+                    } else {
+                        return Err(Exception::InvalidType(Type::named("chararray"), args[0].ty()));
                     };
 
                     for arg in &args[1..] {
@@ -215,7 +191,7 @@ impl File {
                         mem::forget(file);
                     }
 
-                    Ok(Value::Null)
+                    Ok(Value::null())
                 },
             ).into()),
         );
@@ -229,25 +205,24 @@ impl File {
 
 impl FnCall {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
-        let val = env.lookup_var(&self.name).cloned();
+        let val = env.lookup_var(&self.name).cloned()
+            .ok_or_else(|| Exception::NameNotFound(self.name.clone()))?;
 
-        if let Some(Value::Fn(f)) = val {
-            let args = self
-                .args
-                .iter()
-                .map(|expr| expr.interpret(env))
-                .collect::<Result<_>>()?;
+        let f = val.downcast::<Fn<'_>>()?;
 
-            f.invoke(env, args)
-        } else {
-            Err(Exception::NameNotFound(self.name.clone()))
-        }
+        let args = self
+            .args
+            .iter()
+            .map(|expr| expr.interpret(env))
+            .collect::<Result<_>>()?;
+
+        f.invoke(env, args)
     }
 }
 
 impl FnDef {
     pub fn define<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<()> {
-        env.insert_var(&self.name, Value::Fn(self.into()));
+        env.insert_var(&self.name, Value::new::<Fn<'_>>(self.into()));
         Ok(())
     }
 
@@ -266,19 +241,26 @@ impl FnDef {
         env.set_first_iter(true);
         loop {
             if self.stmts.is_empty() {
-                if let Ok(Value::Bit(true)) = self.limit.interpret(env) {
-                    return if self.ret == Type::Null {
-                        Ok(Value::Null)
+                let lim = self.limit.interpret(env)
+                    .map(|v| matches!(v.downcast::<Bit>(), Ok(Bit(true))))
+                    .unwrap_or(false);
+
+                if lim {
+                    return if self.ret == Type::named("null") {
+                        Ok(Value::null())
                     } else {
-                        Err(Exception::InvalidType(self.ret.clone(), Type::Null))
+                        Err(Exception::InvalidType(self.ret.clone(), Type::named("null")))
                     };
                 }
             }
 
             for stmt in &self.stmts {
                 let val = stmt.interpret(env)?;
+                let lim = self.limit.interpret(env)
+                    .map(|v| matches!(v.downcast::<Bit>(), Ok(Bit(true))))
+                    .unwrap_or(false);
 
-                if let Ok(Value::Bit(true)) = self.limit.interpret(env) {
+                if lim {
                     env.pop_scope();
                     return if val.ty() != self.ret {
                         Err(Exception::InvalidType(self.ret.clone(), val.ty()))
@@ -295,12 +277,12 @@ impl FnDef {
 impl Literal {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         match self {
-            Literal::Int(i) => Ok(Value::Int(*i)),
-            Literal::Float(f) => Ok(Value::Float(*f)),
-            Literal::Char(c) => Ok(Value::Char(*c)),
-            Literal::CharArray(s) => Ok(Value::String(s[1..s.len() - 1].to_string())),
-            Literal::Bit(b) => Ok(Value::Bit(*b)),
-            Literal::Fn(f) => Ok(Value::Fn(f.into())),
+            Literal::Int(i) => Ok(Value::new(Int(*i))),
+            Literal::Float(f) => Ok(Value::new(Float(*f))),
+            Literal::Char(c) => Ok(Value::new(Char(*c))),
+            Literal::CharArray(s) => Ok(Value::new(CharArray(s[1..s.len() - 1].to_string()))),
+            Literal::Bit(b) => Ok(Value::new(Bit(*b))),
+            Literal::Fn(f) => Ok(Value::new::<Fn<'_>>(f.into())),
             Literal::Array(a) => {
                 let vals = a
                     .iter()
@@ -316,7 +298,7 @@ impl Literal {
                     }
                 }
 
-                Ok(Value::Array(vals))
+                Ok(Value::new(Array(vals)))
             }
         }
     }
@@ -325,14 +307,14 @@ impl Literal {
 impl Stmt {
     pub fn interpret<'ip>(&'ip self, env: &mut Env<'ip>) -> Result<Value<'ip>> {
         match self {
-            Stmt::FnDef(def) => def.define(env).map(|_| Value::Null),
+            Stmt::FnDef(def) => def.define(env).map(|_| Value::null()),
             Stmt::Assign(assign) => assign.interpret(env),
             Stmt::Sync(sync) => {
                 env.set_sync(true);
                 for stmt in sync {
                     stmt.interpret(env)?;
                 }
-                Ok(Value::Null)
+                Ok(Value::null())
             }
             Stmt::Once(once) => {
                 if env.is_first_iter() {
@@ -340,12 +322,12 @@ impl Stmt {
                         stmt.interpret(env)?;
                     }
                 }
-                Ok(Value::Null)
+                Ok(Value::null())
             }
             Stmt::Expr(expr) => Ok(expr.interpret(env)?),
             Stmt::TypeDef(name, ty) => {
-                env.insert_ty(name, ty.clone());
-                Ok(Value::Null)
+                env.insert_var(name, Value::new(ty.clone()));
+                Ok(Value::null())
             }
         }
     }

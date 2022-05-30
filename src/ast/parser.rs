@@ -257,17 +257,7 @@ impl Stmt {
 impl Type {
     pub fn parser<'a>() -> Parser!['a, Self] {
         recursive(|ty| {
-            filter_map(|span, tok| {
-                Ok(match tok {
-                    Token::Ident("null") => Type::Null,
-                    Token::Ident("int") => Type::Int,
-                    Token::Ident("float") => Type::Float,
-                    Token::Ident("char") => Type::Char,
-                    Token::Ident("chararray") => Type::CharArray,
-                    Token::Ident("bit") => Type::Bit,
-                    _ => return Err(Simple::custom(span, "unrecognized type")),
-                })
-            })
+            Ident::parser().map(Type::Named)
             .or(ty
                 .clone()
                 .delimited_by(just(Token::OpenBracket), just(Token::CloseBracket))

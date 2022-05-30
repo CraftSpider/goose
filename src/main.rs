@@ -1,5 +1,6 @@
 #![feature(iter_intersperse)]
 #![feature(io_safety)]
+#![feature(once_cell)]
 #![warn(
     elided_lifetimes_in_paths,
     explicit_outlives_requirements,
@@ -15,6 +16,8 @@
     clippy::cloned_instead_of_copied,
     clippy::unreadable_literal
 )]
+
+extern crate core;
 
 use std::process::ExitCode;
 

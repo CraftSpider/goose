@@ -22,7 +22,7 @@ def foo: int (i: int) -> |baz != bar| [
     baz += 1;
 ]
 
-def takes_fn: null (f: fn: null (int), a: int) -> |false| []
+def takes_fn: null (f: fn: null (int), a: int) -> |0b| []
 
 write(console, foo(2));
 

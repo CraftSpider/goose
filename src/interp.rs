@@ -2,8 +2,27 @@ use core::fmt;
 use std::collections::HashMap;
 use std::io;
 use std::io::Error;
+use std::ptr::NonNull;
 
-use crate::ast::{BinOp, FnDef, Ident, Type};
+mod array;
+mod null;
+mod func;
+mod int;
+mod ty;
+mod bit;
+mod float;
+mod char;
+mod char_array;
+
+pub use array::Array;
+pub use int::Int;
+pub use char_array::CharArray;
+pub use bit::Bit;
+pub use func::Fn;
+pub use self::char::Char;
+pub use float::Float;
+
+use crate::ast::{BinOp, Ident, Type};
 
 pub type Result<T> = core::result::Result<T, Exception>;
 
@@ -89,12 +108,11 @@ impl BuiltinFn {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Env<'ip> {
     sync: bool,
     first_iter: bool,
     value_stack: Vec<HashMap<String, Value<'ip>>>,
-    ty_stack: Vec<HashMap<String, Type>>,
 }
 
 impl<'ip> Env<'ip> {
@@ -112,7 +130,6 @@ impl<'ip> Env<'ip> {
 
     pub fn push_scope(&mut self) {
         self.value_stack.push(HashMap::new());
-        self.ty_stack.push(HashMap::new());
     }
 
     pub fn lookup_var(&mut self, var: &str) -> Option<&Value<'ip>> {
@@ -133,101 +150,79 @@ impl<'ip> Env<'ip> {
 
     pub fn pop_scope(&mut self) {
         self.value_stack.pop();
-        self.ty_stack.pop();
-    }
-
-    pub fn insert_ty(&mut self, name: &str, ty: Type) -> &Type {
-        let scope = self.ty_stack.last_mut().unwrap();
-        scope.insert(name.to_string(), ty);
-        scope.get(name).unwrap()
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum Fn<'ip> {
-    User(&'ip FnDef),
-    Builtin(BuiltinFn),
+pub unsafe trait ValItem<'ip>: 'ip {
+    fn allow_cast(ty: Type) -> Result<()>
+    where
+        Self: Sized;
+
+    fn clone(&self) -> Box<dyn ValItem<'ip> + 'ip>;
+    fn ty(&self) -> Type;
+    fn write(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        #![allow(unused_variables)]
+        Ok(())
+    }
+    fn get_field(&self, name: &str) -> Option<Value<'ip>>;
+    fn get_op(&self, op: BinOp) -> Option<Fn<'ip>>;
 }
 
-impl<'ip> Fn<'ip> {
-    pub fn name(&self) -> &str {
-        match self {
-            Fn::User(fd) => fd.name(),
-            Fn::Builtin(b) => &*b.name,
-        }
-    }
+impl<'ip> dyn ValItem<'ip> {
+    fn downcast<T: ValItem<'ip>>(&self) -> Result<&T> {
+        T::allow_cast(self.ty())
+            .map(|_| {
+                let ptr = NonNull::from(self)
+                    .cast::<T>();
 
-    pub fn ret_ty(&self) -> &Type {
-        match self {
-            Fn::User(fd) => fd.ret_ty(),
-            Fn::Builtin(b) => &b.ret,
-        }
-    }
-
-    pub fn arg_tys(&self) -> Vec<Type> {
-        match self {
-            Fn::User(fd) => fd.arg_tys(),
-            Fn::Builtin(b) => b.args.clone(),
-        }
-    }
-
-    pub fn invoke(&self, env: &mut Env<'ip>, args: Vec<Value<'ip>>) -> Result<Value<'ip>> {
-        match self {
-            Fn::User(fd) => fd.invoke(env, args),
-            Fn::Builtin(b) => b.invoke(env, &args),
-        }
+                unsafe { ptr.as_ref() }
+            })
     }
 }
 
-impl<'ip> From<&'ip FnDef> for Fn<'ip> {
-    fn from(fd: &'ip FnDef) -> Self {
-        Fn::User(fd)
+pub struct Value<'ip> {
+    data: Box<dyn ValItem<'ip> + 'ip>,
+}
+
+impl Clone for Value<'_> {
+    fn clone(&self) -> Self {
+        Value { data: self.data.clone() }
     }
 }
 
-impl From<BuiltinFn> for Fn<'_> {
-    fn from(b: BuiltinFn) -> Self {
-        Fn::Builtin(b)
-    }
-}
+impl fmt::Debug for Value<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = Vec::<u8>::new();
+        self.data.write(&mut s)
+            .unwrap();
+        let s = String::from_utf8_lossy(&s);
 
-// TODO: This should instead probably be a type + some data. This will make it more complicated,
-//       but allows types to be defined in terms of goose code in the future
-#[derive(Clone, Debug)]
-pub enum Value<'ip> {
-    Null,
-    Int(i128),
-    Float(f64),
-    Bit(bool),
-    Char(char),
-    String(String),
-    Array(Vec<Value<'ip>>),
-    Fn(Fn<'ip>),
+        f.debug_struct("Value")
+            .field("data", &s)
+            .finish()
+    }
 }
 
 impl<'ip> Value<'ip> {
+    pub(crate) fn new<T: ValItem<'ip> + 'ip>(item: T) -> Value<'ip> {
+        Value { data: Box::new(item) }
+    }
+
+    pub fn null() -> Value<'ip> {
+        Self::new(null::Null)
+    }
+
+    pub fn downcast<T: ValItem<'ip> + 'ip>(&self) -> Result<&T> {
+        self.data.downcast()
+    }
+
     pub fn ty(&self) -> Type {
-        match self {
-            Value::Null => Type::Null,
-            Value::Int(_) => Type::Int,
-            Value::Float(_) => Type::Float,
-            Value::Bit(_) => Type::Bit,
-            Value::Char(_) => Type::Char,
-            Value::String(_) => Type::CharArray,
-            Value::Array(arr) => {
-                let inner = if let Some(val) = arr.first() {
-                    val.ty()
-                } else {
-                    Type::Null
-                };
-                Type::Array(Box::new(inner))
-            }
-            Value::Fn(def) => Type::Fn(Box::new(def.ret_ty().clone()), def.arg_tys()),
-        }
+        self.data.ty()
     }
 
     pub fn write<W: io::Write>(&self, w: &mut W) -> Result<()> {
-        match self {
+        self.data.write(w)?;
+        /*match self {
             Value::Null => write!(w, "null")?,
             Value::Int(i) => write!(w, "{}", i)?,
             Value::Float(f) => write!(w, "{}", f)?,
@@ -240,6 +235,7 @@ impl<'ip> Value<'ip> {
             }
             Value::Char(c) => write!(w, "{}", c)?,
             Value::String(s) => write!(w, "{}", s)?,
+            Value::Type(t) => write!(w, "<type {}>", t.pretty())?,
             Value::Array(a) => {
                 write!(w, "[")?;
                 for (idx, item) in a.iter().enumerate() {
@@ -251,50 +247,12 @@ impl<'ip> Value<'ip> {
                 write!(w, "]")?;
             }
             Value::Fn(f) => write!(w, "<fn {}>", f.name())?,
-        };
+        };*/
         Ok(())
     }
 
-    pub fn op_add(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
-        match (self, val) {
-            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a + b)),
-            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a + b)),
-            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
-        }
-    }
-
-    pub fn op_sub(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
-        match (self, val) {
-            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
-            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a - b)),
-            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
-        }
-    }
-
-    pub fn op_mul(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
-        match (self, val) {
-            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
-            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a * b)),
-            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
-        }
-    }
-
-    pub fn op_div(&self, _env: &mut Env<'ip>, val: Value<'ip>) -> Result<Value<'ip>> {
-        match (self, val) {
-            (&Value::Int(a), Value::Int(b)) => Ok(Value::Int(a / b)),
-            (&Value::Float(a), Value::Float(b)) => Ok(Value::Float(a / b)),
-            (a, b) => Err(Exception::InvalidOp(a.ty(), BinOp::Add, b.ty())),
-        }
-    }
-}
-
-impl<'ip> PartialEq for Value<'ip> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Value::Int(left), Value::Int(right)) => left == right,
-            (Value::Float(left), Value::Float(right)) => left == right,
-            (Value::Fn(left), Value::Fn(right)) => std::ptr::eq(left, right),
-            _ => false,
-        }
+    pub fn get_op(&self, op: BinOp) -> Option<Fn<'ip>> {
+        // TODO: Handle fallback to inverting Eq/Neq
+        self.data.get_op(op)
     }
 }
