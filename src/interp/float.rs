@@ -1,5 +1,5 @@
-use crate::ast::Type;
-use super::{ValItem, Value, Fn, Op, Exception, Result};
+use crate::interp::Env;
+use super::{ValItem, Value, Fn, Op, Exception, Result, Type};
 
 pub struct Float(f64);
 
@@ -26,7 +26,7 @@ unsafe impl<'ip> ValItem<'ip> for Float {
         Box::new(Float(self.0))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         Type::named("float")
     }
 

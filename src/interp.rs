@@ -2,6 +2,7 @@ use core::fmt;
 use std::collections::HashMap;
 use std::io;
 use std::ptr::NonNull;
+use typed_arena::Arena;
 
 mod array;
 mod null;
@@ -20,8 +21,9 @@ pub use bit::Bit;
 pub use func::Fn;
 pub use self::char::Char;
 pub use float::Float;
+pub use ty::Type;
 
-use crate::ast::{BinOp, Ident, Type, UnOp};
+use crate::ast::{BinOp, Ident, UnOp};
 
 pub type Result<T> = core::result::Result<T, Exception>;
 
@@ -168,6 +170,7 @@ impl BuiltinFn {
 
 #[derive(Debug, Default)]
 pub struct Env<'ip> {
+    tys: Arena<Type>,
     sync: bool,
     first_iter: bool,
     value_stack: Vec<HashMap<String, Value<'ip>>>,
@@ -209,6 +212,11 @@ impl<'ip> Env<'ip> {
     pub fn pop_scope(&mut self) {
         self.value_stack.pop();
     }
+
+    fn new_ty(&mut self, name: &str) -> Type {
+        let new_id = self.tys.len() as u64;
+        Type::new(new_id, name.to_string())
+    }
 }
 
 pub unsafe trait ValItem<'ip>: 'ip {
@@ -217,7 +225,7 @@ pub unsafe trait ValItem<'ip>: 'ip {
         Self: Sized;
 
     fn clone(&self) -> Box<dyn ValItem<'ip> + 'ip>;
-    fn ty(&self) -> Type;
+    fn ty(&self, env: &mut Env<'_>) -> Type;
     fn write(&self, w: &mut dyn io::Write) -> io::Result<()> {
         #![allow(unused_variables)]
         Ok(())

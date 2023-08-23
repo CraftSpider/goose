@@ -1,5 +1,5 @@
-use crate::ast::{FnDef, Type};
-use super::{Value, ValItem, Op, BuiltinFn, Env, Result, Exception};
+use crate::ast::FnDef;
+use super::{Value, ValItem, Op, BuiltinFn, Env, Result, Exception, Type};
 
 #[derive(Clone, Debug)]
 pub enum Fn<'ip> {
@@ -50,7 +50,7 @@ unsafe impl<'ip> ValItem<'ip> for Fn<'ip> {
         Box::new(Clone::clone(self))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         Type::Fn(Box::new(Clone::clone(self.ret_ty())), self.arg_tys())
     }
 

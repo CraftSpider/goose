@@ -1,6 +1,6 @@
 use std::ops::Deref;
-use crate::ast::Type;
-use super::{ValItem, Op, Exception, Value, Fn, Result};
+use crate::interp::Env;
+use super::{ValItem, Op, Exception, Value, Fn, Result, Type};
 
 pub struct CharArray(String);
 
@@ -23,7 +23,7 @@ unsafe impl<'ip> ValItem<'ip> for CharArray {
         Box::new(CharArray(self.0.clone()))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         Type::named("chararray")
     }
 

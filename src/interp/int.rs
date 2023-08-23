@@ -1,8 +1,8 @@
 use std::io;
 use std::io::Write;
 use std::ops::Deref;
-use crate::ast::Type;
-use super::{ValItem, Value, Op, Bit, Fn, Result, BuiltinFn, Exception};
+use crate::interp::Env;
+use super::{ValItem, Value, Op, Bit, Fn, Result, BuiltinFn, Exception, Type};
 
 #[derive(Clone)]
 pub struct Int(i128);
@@ -30,7 +30,8 @@ unsafe impl<'ip> ValItem<'ip> for Int {
         Box::new(Int(self.0))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
+
         Type::named("int")
     }
 

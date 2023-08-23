@@ -1,5 +1,5 @@
-use crate::ast::Type;
-use super::{Value, ValItem, Fn, Result, Op, BuiltinFn, Exception};
+use crate::interp::Env;
+use super::{Value, ValItem, Fn, Result, Op, BuiltinFn, Exception, Type};
 
 pub struct Bit(bool);
 
@@ -26,7 +26,7 @@ unsafe impl<'ip> ValItem<'ip> for Bit {
         Box::new(Bit(self.0))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         Type::named("bit")
     }
 

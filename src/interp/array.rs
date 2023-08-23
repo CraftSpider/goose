@@ -1,6 +1,5 @@
-
-use crate::ast::Type;
-use super::{ValItem, Value, Fn, Result, Exception, Op};
+use crate::interp::Env;
+use super::{ValItem, Value, Fn, Result, Exception, Type, Op};
 
 pub struct Array<'ip>(pub(crate) Vec<Value<'ip>>);
 
@@ -17,7 +16,7 @@ unsafe impl<'ip> ValItem<'ip> for Array<'ip> {
         Box::new(Array(self.0.clone()))
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         let inner = self.0.get(0)
             .map_or_else(|| Type::named("null"), |v| v.ty());
 

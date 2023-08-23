@@ -1,5 +1,7 @@
 use super::*;
-use crate::interp::{BuiltinFn, Env, Exception, Result, Value, Int, CharArray, Fn, Bit, Float, Char, Array, Op};
+use crate::interp::{
+    BuiltinFn, Env, Exception, Result, Value, Int, CharArray, Fn, Bit, Float, Char, Array, Op, Type
+};
 
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::{fs, io, mem};

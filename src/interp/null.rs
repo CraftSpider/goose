@@ -1,5 +1,5 @@
-use crate::ast::Type;
-use super::{ValItem, Value, Fn, Result, Exception, Op};
+use crate::interp::Env;
+use super::{ValItem, Value, Fn, Result, Exception, Op, Type};
 
 pub struct Null;
 
@@ -16,7 +16,7 @@ unsafe impl<'ip> ValItem<'ip> for Null {
         Box::new(Null)
     }
 
-    fn ty(&self) -> Type {
+    fn ty(&self, env: &mut Env<'_>) -> Type {
         Type::named("null")
     }
 
